@@ -1,0 +1,4 @@
+:host { display: inline-block; }
+span { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 12px; font-weight: 650; }
+.active { background: #dcfce7; color: #166534; }
+.inactive { background: #fee2e2; color: #991b1b; }

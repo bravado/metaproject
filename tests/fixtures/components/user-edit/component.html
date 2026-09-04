@@ -1,0 +1,33 @@
+<title>Edit User</title>
+
+<component-property name="id" type="integer" required example="1"></component-property>
+
+<data-source
+  .resource=${api.getUser({ path: { id } })}
+  @save=${event => api.updateUser({
+    path: { id: event.detail.resource.id },
+    body: event.detail.resource
+  })}
+>
+  <form class="user-form">
+    <form-input field="name" label="Name" required></form-input>
+    <form-input field="email" label="Email" type="email" required></form-input>
+
+    <form-select field="role" label="Role">
+      <option value="admin">Administrator</option>
+      <option value="member">Member</option>
+      <option value="viewer">Viewer</option>
+    </form-select>
+
+    <fieldset>
+      <legend>Contact preference</legend>
+      <form-radio field="contactMethod" value="email">Email</form-radio>
+      <form-radio field="contactMethod" value="sms">SMS</form-radio>
+    </fieldset>
+
+    <form-textarea field="notes" label="Notes" rows="3"></form-textarea>
+    <form-checkbox field="active">Active user</form-checkbox>
+
+    <button type="button" data-action="save" data-validate>Save</button>
+  </form>
+</data-source>

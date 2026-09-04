@@ -1,0 +1,56 @@
+{
+  "name": "metaproject",
+  "version": "0.6.2",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "exports": {
+    "./components": "./components/index.js",
+    "./compiler": "./compiler/index.js",
+    "./compiler/browser": "./compiler/browser.js",
+    "./vite": "./vite/index.js",
+    "./api-client": "./api-client/index.js",
+    "./openapi": "./openapi/index.js",
+    "./build": "./build/index.js",
+    "./mock-api": "./mock-api/index.js",
+    "./project": "./project/index.js",
+    "./openapi/mutator": "./openapi/mutator.js",
+    "./init": "./init/index.js",
+    "./openapi/project-tools": "./openapi/project-tools.js"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "find components compiler vite api-client mock-api openapi project init build bin -name '*.js' -print0 | xargs -0 -n1 node --check"
+  },
+  "dependencies": {
+    "lit": "3.3.3",
+    "yaml": "2.8.1",
+    "esbuild": "^0.25.0"
+  },
+  "peerDependencies": {
+    "vite": ">=6"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
+  },
+  "bin": {
+    "metaproject": "./bin/metaproject.js"
+  },
+  "files": [
+    "api-client/",
+    "bin/",
+    "build/",
+    "compiler/",
+    "components/",
+    "init/",
+    "mock-api/",
+    "openapi/",
+    "project/",
+    "skills/",
+    "vite/",
+    "README.md"
+  ]
+}
