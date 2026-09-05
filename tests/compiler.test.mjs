@@ -41,6 +41,17 @@ test('Lit splitter preserves nested template expressions', () => {
   assert.match(split.expressions[0],/html`<b>\$\{item\.name\}<\/b>`/);
 });
 
+test('native row templates are static and dynamic handlers belong on data-table', () => {
+  const valid=`<data-table .resource=\${api.listUsers()} @open=\${event => navigate('user-detail',{id:event.detail.resource.id})}><table><tbody><template data-row><tr><td><data-label field="name"></data-label></td><td><button data-action="open">Open</button></td></tr></template></tbody></table></data-table>`;
+  assert.doesNotThrow(()=>parseComponentSource(valid,{tag:'user-list',path:'components/user-list/component.html'}));
+
+  const invalid=`<data-table .resource=\${api.listUsers()}><table><tbody><template data-row><tr><td>\${row.name}</td><td><button @click=\${() => navigate('user-detail')}>Open</button></td></tr></template></tbody></table></data-table>`;
+  assert.throws(
+    ()=>parseComponentSource(invalid,{tag:'user-list',path:'components/user-list/component.html'}),
+    /Lit expressions are not allowed inside <template data-row>.*Move dynamic handlers\/bindings to the owning component/
+  );
+});
+
 test('compiled modules are ordinary Lit custom elements using Metaproject runtime', () => {
   const module=compileComponentModule({tag:'user-detail',source:detailSource,css:'h1{font-weight:700}'});
   assert.match(module,/class UserDetailElement extends LitElement/);
