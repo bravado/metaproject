@@ -87,6 +87,28 @@ Use `data-validate` when an action should validate its containing form first.
 
 Use a real table inside `data-table` and `<template data-row>` for repeated rows. Reuse custom components for meaningful domain/UI concepts, not for every wrapper or button.
 
+`<template data-row>` is inert native template content and must be static. Never place `${...}`, `.prop=${...}`, or `@event=${...}` inside it. `data-table` clones that DOM and provides each cloned row as resource context.
+
+Put dynamic bindings and handlers on `<data-table>` itself, then use context-aware primitives and semantic actions inside the row template:
+
+```html
+<data-table
+  .resource=${api.listUsers()}
+  @open=${event => navigate('user-detail', { id: event.detail.resource.id })}
+>
+  <table>
+    <tbody>
+      <template data-row>
+        <tr>
+          <td><data-label field="name"></data-label></td>
+          <td><button type="button" data-action="open">Open</button></td>
+        </tr>
+      </template>
+    </tbody>
+  </table>
+</data-table>
+```
+
 Use `navigate('<component-tag>', properties)` when one component opens another.
 
 ## Finish
