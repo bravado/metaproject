@@ -37,6 +37,7 @@ export function parseComponentSource(source, { tag, path = '' } = {}) {
   }
 
   const body = removeRanges(source, removals).trim();
+  assertStaticNativeTemplates(body, path || tag);
   const actions = unique([...body.matchAll(/\bdata-action\s*=\s*(['"])([^'"]+)\1/gi)].map(x => x[2].trim()).filter(Boolean));
   const dependencies = unique([...body.matchAll(/<([a-z][\w.-]*-[\w.-]+)(?:\s|>|\/)/gi)]
     .map(x => x[1].toLowerCase())
@@ -58,6 +59,17 @@ export function parseComponentSource(source, { tag, path = '' } = {}) {
   };
 }
 
+export function assertStaticNativeTemplates(source, resource = 'component') {
+  const pattern = /<template\b([^>]*)>([\s\S]*?)<\/template\s*>/gi;
+  let match;
+  while ((match = pattern.exec(String(source || '')))) {
+    const body = match[2] || '';
+    if (!body.includes('${')) continue;
+    const attrs = parseAttributes(match[1] || '');
+    const kind = attrs['data-row'] !== undefined ? '<template data-row>' : '<template>';
+    throw new Error(`${resource}: Lit expressions are not allowed inside ${kind}. Move dynamic handlers/bindings to the owning component (for example <data-table>) and use row context plus data-action/data-label/form-* inside the template.`);
+  }
+}
 
 export function analyzeActionOperations(source) {
   const split = splitLitTemplate(String(source || ''));
