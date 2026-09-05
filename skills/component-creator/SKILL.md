@@ -66,6 +66,26 @@ For actions:
 </data-source>
 ```
 
+For collection tables, keep `<template data-row>` completely static. Never generate Lit expressions, property bindings, or event bindings inside the native template. Put handlers on `<data-table>` and use row context inside the template:
+
+```html
+<data-table
+  .resource=${api.listUsers()}
+  @open=${event => navigate('user-detail', { id: event.detail.resource.id })}
+>
+  <table>
+    <tbody>
+      <template data-row>
+        <tr>
+          <td><data-label field="name"></data-label></td>
+          <td><button type="button" data-action="open">Open</button></td>
+        </tr>
+      </template>
+    </tbody>
+  </table>
+</data-table>
+```
+
 Use `navigate('<component-tag>', properties)` for simple component-to-component flows such as list → detail/edit.
 
 ## Form mapping
@@ -90,4 +110,4 @@ npx metaproject openapi check-examples
 npx metaproject build
 ```
 
-Verify that every `api.<operationId>()` exists, every top-level component has enough example-backed data to render usefully, composed tags exist, and generated `public/components/` files were not edited manually.
+Verify that every `api.<operationId>()` exists, every top-level component has enough example-backed data to render usefully, every `<template data-row>` is static, composed tags exist, and generated `public/components/` files were not edited manually.
