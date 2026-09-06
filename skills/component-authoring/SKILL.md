@@ -46,6 +46,42 @@ Use Metaproject's data-aware primitives:
 
 Prefer context over manually threading the same object through many nested components.
 
+## Reactive data sources
+
+For a one-shot value or Promise, `.resource` may still receive the API call directly:
+
+```html
+<data-source .resource=${api.getUser({ path: { id } })}>...</data-source>
+```
+
+When data must be refreshable, pass a loader function and a stable key. The function is re-run on `refresh()` or when that key is invalidated:
+
+```html
+<data-source
+  .key=${`users`}
+  .resource=${() => api.listUsers()}
+  @refresh=${event => event.currentTarget.refresh()}
+>
+  ...
+  <button type="button" data-action="refresh">Refresh</button>
+</data-source>
+```
+
+After a successful mutation, invalidate every affected source key from the owning `data-source`:
+
+```html
+<data-source
+  .key=${`user:${id}`}
+  .resource=${() => api.getUser({ path: { id } })}
+  @save=${event => api.updateUser({ path: { id }, body: event.detail.resource })
+    .then(() => event.currentTarget.invalidate([`user:${id}`, 'users']))}
+>
+  ...
+</data-source>
+```
+
+All connected keyed sources in the same application refresh when their key is invalidated. Canvas relays these invalidations between component preview boxes as well. Keep keys deterministic and include any parameters that materially change the fetched resource.
+
 ## API calls
 
 Use `api.<operationId>()` for modeled backend calls:
@@ -108,6 +144,22 @@ Put dynamic bindings and handlers on `<data-table>` itself, then use context-awa
   </table>
 </data-table>
 ```
+
+For genuinely dynamic records where columns are not known at authoring time, omit the native row template and give `data-table` column/action descriptors. If `columns` is omitted too, columns are inferred from the first object row:
+
+```html
+<data-table
+  .resource=${rows}
+  .columns=${schema.columns.map(column => ({ field: column.name, label: column.name }))}
+  .actions=${[
+    { name:'edit', label:'Edit' },
+    { name:'delete', label:'Delete', className:'danger' }
+  ]}
+  @edit=${event => openEditor(event.detail.resource)}
+></data-table>
+```
+
+Use this auto-table mode only when the record shape is runtime-defined. Prefer authored table markup for stable application schemas.
 
 Use `navigate('<component-tag>', properties)` when one component opens another.
 

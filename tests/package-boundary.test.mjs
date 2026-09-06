@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 test('Metaproject exposes stable subpath imports for runtime and compiler', async () => {
   const pkg = JSON.parse(await readFile('package.json', 'utf8'));
   assert.equal(pkg.name, 'metaproject');
-  assert.equal(pkg.exports['./components'], './components/index.js');
+  assert.equal(pkg.exports['./components'], './components/reactive.js');
   assert.equal(pkg.exports['./compiler'], './compiler/index.js');
   assert.equal(pkg.exports['./compiler/browser'], './compiler/browser.js');
   assert.equal(pkg.exports['./api-client'], './api-client/index.js');

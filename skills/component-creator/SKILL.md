@@ -66,6 +66,21 @@ For actions:
 </data-source>
 ```
 
+For reads that must refresh after mutations, use a keyed loader function and invalidate affected keys only after the mutation succeeds:
+
+```html
+<data-source
+  .key=${`users`}
+  .resource=${() => api.listUsers()}
+  @delete=${event => api.deleteUser({ path:{ id:event.detail.resource.id } })
+    .then(() => event.currentTarget.invalidate('users'))}
+>
+  ...
+</data-source>
+```
+
+If an item mutation affects both a detail and collection source, invalidate both stable keys. Do not manually patch sibling components or duplicate the list request in mutation handlers.
+
 For collection tables, keep `<template data-row>` completely static. Never generate Lit expressions, property bindings, or event bindings inside the native template. Put handlers on `<data-table>` and use row context inside the template:
 
 ```html
@@ -84,6 +99,17 @@ For collection tables, keep `<template data-row>` completely static. Never gener
     </tbody>
   </table>
 </data-table>
+```
+
+If fields are runtime-defined (for example a generic database browser), use `data-table` auto mode rather than generating expressions inside a native template:
+
+```html
+<data-table
+  .resource=${rows}
+  .columns=${columns.map(column => ({ field:column.name, label:column.name }))}
+  .actions=${[{name:'edit',label:'Edit'}]}
+  @edit=${event => navigate('row-edit', { id:event.detail.resource.id })}
+></data-table>
 ```
 
 Use `navigate('<component-tag>', properties)` for simple component-to-component flows such as list → detail/edit.
@@ -110,4 +136,4 @@ npx metaproject openapi check-examples
 npx metaproject build
 ```
 
-Verify that every `api.<operationId>()` exists, every top-level component has enough example-backed data to render usefully, every `<template data-row>` is static, composed tags exist, and generated `public/components/` files were not edited manually.
+Verify that every `api.<operationId>()` exists, every top-level component has enough example-backed data to render usefully, every `<template data-row>` is static, keyed reloadable sources use loader functions, composed tags exist, and generated `public/components/` files were not edited manually.

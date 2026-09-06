@@ -6,7 +6,7 @@
     "node": ">=20.19.0"
   },
   "exports": {
-    "./components": "./components/index.js",
+    "./components": "./components/reactive.js",
     "./compiler": "./compiler/index.js",
     "./compiler/browser": "./compiler/browser.js",
     "./vite": "./vite/index.js",
