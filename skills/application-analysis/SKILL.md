@@ -75,6 +75,26 @@ Use synthetic, non-sensitive values. Avoid huge payloads. The default example sh
 
 If required path/query values are useful for exercising the Operation, also provide `example` on those parameters.
 
+### Keep navigable examples coherent
+
+When one example exposes values that a component can pass to another parameterized Operation, the downstream mock examples must cover those values. Do not expose a list of selectable IDs/names whose detail/schema/row examples all describe a different resource.
+
+Use `x-metaproject-match` on named response examples when multiple request values need distinct mock responses:
+
+```yaml
+examples:
+  default:
+    x-metaproject-match:
+      path: { id: '1' }
+    value: { id: 1, name: Ada }
+  second:
+    x-metaproject-match:
+      path: { id: '2' }
+    value: { id: 2, name: Grace }
+```
+
+The matcher may use request-shaped `path`, `query`, `headers`, or `body` subsets. Canvas Mock mode selects the first matching example; an explicit `response.example` still wins, and `default` remains the fallback. If multiple navigable examples add no value, prefer reducing the upstream collection to values covered by the default examples.
+
 ## Deterministic mutations
 
 After deciding the API semantics, prefer Metaproject's mutation commands over hand-editing YAML structure:
