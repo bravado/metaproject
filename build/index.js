@@ -64,8 +64,7 @@ export function buildProjectApiClient({ root = process.cwd(), outputPath, contex
 }
 
 /**
- * Compile HTML-first and advanced single-file project components into
- * browser-native ESM assets.
+ * Compile HTML-first project components into browser-native ESM assets.
  *
  * Output contains one entry module per component, index.js, runtime.js, api.js,
  * a manifest, and optional shared chunks. No output module contains bare npm
@@ -101,23 +100,6 @@ export async function buildProjectComponents({ root = process.cwd(), context, mi
     entryPoints.runtime = runtimeEntry;
 
     for (const component of components.values()) {
-      if (component.advanced) {
-        const source = fs.readFileSync(component.sourcePath, 'utf8');
-        const extension = path.extname(component.sourcePath).toLowerCase() === '.ts' ? '.ts' : '.js';
-        const generatedPath = path.join(temp, `${component.tag}${extension}`);
-        fs.writeFileSync(generatedPath, advancedComponentEntrySource(source));
-        entryPoints[component.tag] = generatedPath;
-        manifest.components[component.tag] = {
-          file:`${component.tag}.js`,
-          title:component.title,
-          properties:[],
-          actions:[],
-          actionOperations:{},
-          dependencies:[]
-        };
-        continue;
-      }
-
       const source = fs.readFileSync(component.htmlPath, 'utf8');
       const css = component.stylePath ? fs.readFileSync(component.stylePath, 'utf8') : '';
       const scriptSource = component.scriptPath ? fs.readFileSync(component.scriptPath, 'utf8') : '';
@@ -195,9 +177,8 @@ export function discoverProjectComponents(root, sourceDir = DEFAULT_COMPONENT_SO
   const sourceAbsolute = safeProjectPath(root, sourceDir);
   const out = new Map();
   if (!fs.existsSync(sourceAbsolute)) return out;
-  const files = walk(sourceAbsolute);
 
-  for (const htmlPath of files.filter(file => path.basename(file) === 'component.html')) {
+  for (const htmlPath of walk(sourceAbsolute).filter(file => path.basename(file) === 'component.html')) {
     const tag = tagFromComponentPath(htmlPath);
     if (out.has(tag)) throw new Error(`Duplicate Metaproject component tag <${tag}>.`);
     const dir = path.dirname(htmlPath);
@@ -205,25 +186,10 @@ export function discoverProjectComponents(root, sourceDir = DEFAULT_COMPONENT_SO
     const stylePath = path.join(dir, 'style.css');
     out.set(tag, {
       tag,
-      advanced:false,
       htmlPath,
       relativeHtmlPath:normalizeProjectPath(path.relative(root, htmlPath)),
       scriptPath,
       stylePath:fs.existsSync(stylePath) ? stylePath : null
-    });
-  }
-
-  for (const sourcePath of files.filter(isAdvancedComponentCandidate)) {
-    const source = fs.readFileSync(sourcePath, 'utf8');
-    const tag = advancedComponentTag(source);
-    if (!tag) continue;
-    if (out.has(tag)) throw new Error(`Duplicate Metaproject component tag <${tag}>.`);
-    out.set(tag, {
-      tag,
-      advanced:true,
-      title:humanizeComponentTag(tag),
-      sourcePath,
-      relativeSourcePath:normalizeProjectPath(path.relative(root, sourcePath))
     });
   }
   return out;
@@ -261,14 +227,6 @@ function runtimeEntrySource() {
     `export function configureMetaproject(options = {}) { return configureRuntime({ ...options, api: options.api ?? api }); }\n`;
 }
 
-function advancedComponentEntrySource(source) {
-  return `import './runtime.js';\n` +
-    `import { metaprojectEnvironment } from 'metaproject/components';\n` +
-    `const api = new Proxy({}, { get(_target, key) { return metaprojectEnvironment().api[key]; } });\n` +
-    `const navigate = (...args) => metaprojectEnvironment().navigate(...args);\n` +
-    `${source}\n`;
-}
-
 function indexEntrySource(tags) {
   const imports = tags.map(tag => `import './${tag}.js';`).join('\n');
   return `export * from './runtime.js';\n${imports}${imports ? '\n' : ''}`;
@@ -302,45 +260,37 @@ function metaprojectSelfResolver(components) {
 
 function assertBrowserNativeOutput(outputAbsolute) {
   const bareImport = /\b(?:from\s*|import\s*)['"](?:lit|metaproject(?:\/|['"]))/;
-  for (const file of waljÝ]]XœÛÛ]JK™š[\Šš[HOˆš[K™[™ÕÚ]
-	ËšœÉÊJJHÂˆÛÛœÝÛÝ\˜ÙHHœËœ™XYš[TÞ[˜Êš[K	Ý]Ž	ÊNÂˆYˆ
-˜\™R[\Ü\Ý
-ÛÝ\˜ÙJJH›ÝÈ™]È\œ›ÜŠÙ[™\˜]YÝ]XÈ\ÜÙ]Ý[ÛÛZ[œÈ[ˆ[œ™\ÛÛ™YœH[\Üˆ	Ùš[_X
-NÂˆBŸB‚™[˜Ý[Ûˆ\ÐY˜[˜ÙYÛÛ\Û™[Ø[™Y]Jš[JHÂˆYˆ
-K×ŠÎšœßÊIË\Ý
-š[JJH™]\›ˆ˜[ÙNÂˆ™]\›ˆK×˜ÛÛ\Û™[ŠÎšœßÊIË\Ý
-]˜˜\Ù[˜[YJš[JJNÂŸB‚™[˜Ý[ÛˆY˜[˜ÙYÛÛ\Û™[YÊÛÝ\˜ÙJHÂˆÛÛœÝXÛÜ˜]ÜˆHÝš[™ÊÛÝ\˜ÙH	ÉÊK›X]Ú
-ÐÝ\ÝÛQ[[Y[
-Ê–ÉÈ—J×‰È—JÊVÉÈ—WÊ—
-KÊNÂˆYˆ
-XÛÜ˜]ÜŠH™]\›ˆXÛÜ˜]Ü–ÌWNÂˆ™]\›ˆÝš[™ÊÛÝ\˜ÙH	ÉÊK›X]Ú
-ØÝ\ÝÛQ[[Y[×™Yš[™W
-Ê–ÉÈ—J×‰È—JÊVÉÈ—KÊOË–ÌWH[ÂŸB‚™[˜Ý[Ûˆ[X[š^™PÛÛ\Û™[YÊYÊHÂˆ™]\›ˆÝš[™ÊYÈ	ÉÊKœ™\XÙJÖËW×JËÙË	È	ÊKœ™\XÙJ×—ËÙËX]ÚOˆX]ÚÕ\\Ø\ÙJ
-JNÂŸB‚™[˜Ý[Ûˆ\œÙQØÝ[Y[
-ÛÝ\˜ÙKš[T]
-HÂˆÛÛœÝ^HÝš[™ÊÛÝ\˜ÙH	ÉÊKš[J
-NÂˆYˆ
-]^
-H™]\›ˆßNÂˆ™]\›ˆÝš[™Êš[T]
-KÓÝÙ\Ø\ÙJ
-K™[™ÕÚ]
-	ËšœÛÛ‰ÊHÈ”ÓÓ‹œ\œÙJ^
-Hˆ\œÙVX[[
-^
-NÂŸB‚™[˜Ý[ÛˆØY™T›Ú™XÝ]
-›ÛÝ™[]]™JHÂˆÛÛœÝ\™Ù]H]œ™\ÛÛ™J›ÛÝ›Ü›X[^™T›Ú™XÝ]
-™[]]™JJNÂˆÛÛœÝ™[H]œ™[]]™J›ÛÝ\™Ù]
-NÂˆYˆ
-™[œÝ\ÕÚ]
-	Ë‹‰ÊH]š\ÐXœÛÛ]J™[
-JH›ÝÈ™]È\œ›ÜŠ]\ØØ\\ÈHY]\›Ú™XÝ›ÛÝˆ	Ü™[]]™_X
-NÂˆ™]\›ˆ\™Ù]ÂŸB‚™[˜Ý[Ûˆ›Ü›X[^™T›Ú™XÝ]
-˜[YJHÂˆ™]\›ˆÝš[™Ê˜[YH	ÉÊKœ™\XÙJ×ÙË	ËÉÊKœ™\XÙJ×——ËË	ÉÊKœ™\XÙJ×ÉË	ÉÊNÂŸB‚™[˜Ý[ÛˆØ[Ê\ŠHÂˆYˆ
-YœË™^\ÝÔÞ[˜Ê\ŠJH™]\›ˆ×NÂˆÛÛœÝš[\ÈH×NÂˆ›Üˆ
-ÛÛœÝ[žHÙˆœËœ™XY\”Þ[˜Ê\‹ÈÚ]š[U\\ÎYHJJHÂˆÛÛœÝ\™Ù]H]š›Ú[Š\‹[žK›˜[YJNÂˆYˆ
-[žKš\Ñ\™XÝÜžJ
-JHš[\Ëœ\Ú
-‹‹Ø[Ê\™Ù]
-JNÂˆ[ÙHš[\Ëœ\Ú
-\™Ù]
-NÂˆBˆ™]\›ˆš[\ÎÂŸB
+  for (const file of walk(outputAbsolute).filter(file => file.endsWith('.js'))) {
+    const source = fs.readFileSync(file, 'utf8');
+    if (bareImport.test(source)) throw new Error(`Generated static asset still contains an unresolved npm import: ${file}`);
+  }
+}
+
+function parseDocument(source, filePath) {
+  const text = String(source || '').trim();
+  if (!text) return {};
+  return String(filePath).toLowerCase().endsWith('.json') ? JSON.parse(text) : parseYaml(text);
+}
+
+function safeProjectPath(root, relative) {
+  const target = path.resolve(root, normalizeProjectPath(relative));
+  const rel = path.relative(root, target);
+  if (rel.startsWith('..') || path.isAbsolute(rel)) throw new Error(`Path escapes the Metaproject root: ${relative}`);
+  return target;
+}
+
+function normalizeProjectPath(value) {
+  return String(value || '').replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/$/, '');
+}
+
+function walk(dir) {
+  if (!fs.existsSync(dir)) return [];
+  const files = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes:true })) {
+    const target = path.join(dir, entry.name);
+    if (entry.isDirectory()) files.push(...walk(target));
+    else files.push(target);
+  }
+  return files;
+}
+
