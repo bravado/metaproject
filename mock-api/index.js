@@ -41,7 +41,7 @@ export function createMockApi(openapi, options = {}) {
         ...(configuredResponses[operation.operationId] || {}),
         ...(args.response || {})
       };
-      const value = resolveMockResponse(openapi, operation, selection);
+      const value = resolveMockResponse(openapi, operation, selection, args);
       const delay = resolveDelay(options.delay, operation, args);
       if (delay > 0) return new Promise(resolve => setTimeout(() => resolve(value), delay));
       return value;
@@ -96,10 +96,11 @@ export function validateMockInvocation(operation, args = {}, { allowMissingRequi
  *
  * Selection may contain `{ status, mediaType, example }`. Without an explicit
  * selection the resolver chooses the first 2xx response, prefers JSON content,
- * then `content.example`, a named `default` example, or the first named example.
+ * then a named example whose `x-metaproject-match` matches the invocation,
+ * `content.example`, a named `default` example, or the first named example.
  * No schema-derived fake values are generated.
  */
-export function resolveMockResponse(openapi, operation, selection = {}) {
+export function resolveMockResponse(openapi, operation, selection = {}, args = {}) {
   const responses = operation?.raw?.responses || {};
   const [status, unresolvedResponse] = selectResponse(responses, selection.status, operation.operationId);
   const response = resolveLocalRef(openapi, unresolvedResponse) || {};
@@ -130,6 +131,11 @@ export function resolveMockResponse(openapi, operation, selection = {}) {
     return cloneValue(example.value);
   }
 
+  const matchedExample = selectMatchedExample(openapi, resolvedContent.examples || {}, args);
+  if (matchedExample && Object.prototype.hasOwnProperty.call(matchedExample, 'value')) {
+    return cloneValue(matchedExample.value);
+  }
+
   if (Object.prototype.hasOwnProperty.call(resolvedContent, 'example')) {
     return cloneValue(resolvedContent.example);
   }
@@ -146,6 +152,43 @@ export function resolveMockResponse(openapi, operation, selection = {}) {
     `${operation.operationId}: response ${status} ${mediaType} has no OpenAPI example.`,
     context
   );
+}
+
+function selectMatchedExample(openapi, examples, args) {
+  for (const unresolvedExample of Object.values(examples || {})) {
+    const example = resolveLocalRef(openapi, unresolvedExample) || {};
+    const match = example['x-metaproject-match'];
+    if (!match || typeof match !== 'object') continue;
+    if (matchesInvocation(match, args)) return example;
+  }
+  return null;
+}
+
+function matchesInvocation(match, args) {
+  for (const [section, expected] of Object.entries(match || {})) {
+    const actual = section === 'headers' ? normalizedHeaders(args?.headers || {}) : args?.[section];
+    const normalizedExpected = section === 'headers' ? normalizedHeaders(expected || {}) : expected;
+    if (!matchesSubset(normalizedExpected, actual)) return false;
+  }
+  return true;
+}
+
+function matchesSubset(expected, actual) {
+  if (Array.isArray(expected)) {
+    if (!Array.isArray(actual) || expected.length !== actual.length) return false;
+    return expected.every((value, index) => matchesSubset(value, actual[index]));
+  }
+  if (expected && typeof expected === 'object') {
+    if (!actual || typeof actual !== 'object') return false;
+    return Object.entries(expected).every(([key, value]) => matchesSubset(value, actual[key]));
+  }
+  return Object.is(expected, actual);
+}
+
+function normalizedHeaders(headers) {
+  const result = {};
+  for (const [key, value] of Object.entries(headers || {})) result[String(key).toLowerCase()] = value;
+  return result;
 }
 
 function selectResponse(responses, requestedStatus, operationId) {
