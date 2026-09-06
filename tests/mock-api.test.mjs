@@ -28,7 +28,10 @@ function specification() {
           responses:{
             '200':{content:{
               'text/plain':{example:'plain user'},
-              'application/json':{examples:{first:{value:{id:1,name:'John'}},second:{value:{id:2,name:'Mary'}}}}
+              'application/json':{examples:{
+                first:{'x-metaproject-match':{path:{id:1}},value:{id:1,name:'John'}},
+                second:{'x-metaproject-match':{path:{id:2}},value:{id:2,name:'Mary'}}
+              }}
             }}
           }
         },
@@ -66,7 +69,13 @@ test('mock API returns OpenAPI response examples without HTTP',()=>{
   assert.deepEqual(api.updateUser({path:{id:1},body:{id:1,name:'Input'}}),{id:1,name:'Updated'});
 });
 
-test('mock response prefers application/json and first named example by default',()=>{
+test('mock response selects x-metaproject-match examples from invocation arguments',()=>{
+  const api=createMockApi(specification());
+  assert.deepEqual(api.getUser({path:{id:1}}),{id:1,name:'John'});
+  assert.deepEqual(api.getUser({path:{id:2}}),{id:2,name:'Mary'});
+});
+
+test('mock response prefers application/json and first named example when no matcher applies',()=>{
   const api=createMockApi(specification());
   assert.deepEqual(api.getUser({path:{id:123}}),{id:1,name:'John'});
 });
