@@ -7,6 +7,7 @@ export const DATA_INVALIDATE_EVENT = 'metaproject-data-invalidate';
 const SOURCE_STATE = new WeakMap();
 const TABLE_STATE = new WeakMap();
 const AUTO_ROWS = new WeakMap();
+const AUTO_ACTION_EVENTS = new WeakSet();
 
 const sourceResource = Object.getOwnPropertyDescriptor(DataSource.prototype, 'resource');
 const sourceConnected = DataSource.prototype.connectedCallback;
@@ -170,6 +171,19 @@ DataTable.prototype.disconnectedCallback = function disconnectedCallback() {
   tableDisconnected.call(this);
 };
 
+// components/index.js registers the custom element during module evaluation.
+// Browsers capture lifecycle callbacks at customElements.define(), so a later
+// connectedCallback patch is not guaranteed to run for an already-defined
+// <data-table>. Delegate generated action clicks at document level as the
+// canonical path; this works regardless of definition/upgrade timing.
+if (typeof document !== 'undefined') {
+  document.addEventListener('click', event => {
+    const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+    const host = path.find(node => node instanceof DataTable);
+    if (host) handleAutoAction(host, event);
+  }, true);
+}
+
 function sourceState(source) {
   let state = SOURCE_STATE.get(source);
   if (!state) {
@@ -261,10 +275,12 @@ function renderAutoTable(host) {
 }
 
 function handleAutoAction(host, event) {
+  if (AUTO_ACTION_EVENTS.has(event)) return;
   const button = event.composedPath().find(node => node instanceof Element && node.hasAttribute?.('data-metaproject-auto-action'));
   if (!button || !host.contains(button)) return;
   const row = event.composedPath().map(node => AUTO_ROWS.get(node)).find(value => value !== undefined);
   if (row === undefined) return;
+  AUTO_ACTION_EVENTS.add(event);
   event.preventDefault();
   event.stopImmediatePropagation();
   emitDataAction(button,row,event);
