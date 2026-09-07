@@ -1,108 +1,176 @@
-import { DataSource, DataTable, emitDataAction, readDataField } from './index.js';
+import { DataSource as DataSourceElement, DataTable, emitDataAction, readDataField } from './index.js';
+import {
+  DATA_SOURCE_CONTEXT_REQUEST,
+  DataSourceConsumerController,
+  createDataSource,
+  getDefaultDataSource,
+  requestDataSourceContext
+} from '../data-source/index.js';
 
 export * from './index.js';
+export * from '../data-source/index.js';
 
 export const DATA_INVALIDATE_EVENT = 'metaproject-data-invalidate';
 
-const SOURCE_STATE = new WeakMap();
+const PROVIDER_STATE = new WeakMap();
 const TABLE_STATE = new WeakMap();
 const AUTO_ROWS = new WeakMap();
 const AUTO_ACTION_EVENTS = new WeakSet();
 
-const sourceResource = Object.getOwnPropertyDescriptor(DataSource.prototype, 'resource');
-const sourceConnected = DataSource.prototype.connectedCallback;
-const sourceDisconnected = DataSource.prototype.disconnectedCallback;
+// <data-source> is a scoped provider. The base class is retained for backwards
+// compatibility with old .resource usage, while source/client/url are the new
+// stateful DataSource contract.
+for (const [name, descriptor] of Object.entries({
+  source:{
+    get() { return providerState(this).source || resolveProviderSource(this); },
+    set(value) { const state=providerState(this); state.source=value || null; state.ownedSource=null; notifyProvider(this); }
+  },
+  client:{
+    get() { return providerState(this).client; },
+    set(value) { const state=providerState(this); state.client=value || null; state.ownedSource=null; notifyProvider(this); }
+  },
+  url:{
+    get() { return providerState(this).url || this.getAttribute?.('url') || ''; },
+    set(value) { const state=providerState(this); state.url=value == null ? '' : String(value); state.ownedSource=null; notifyProvider(this); }
+  }
+})) Object.defineProperty(DataSourceElement.prototype, name, { configurable:true, ...descriptor });
 
-Object.defineProperty(DataSource.prototype, 'key', {
-  configurable:true,
-  get() { return sourceState(this).key; },
-  set(value) {
-    const state = sourceState(this);
-    const next = value == null ? '' : String(value);
-    if (next === state.key) return;
-    state.key = next;
-    state.keyChanged = true;
-    if (state.initialized && state.loader) queueMicrotask(() => {
-      if (!state.keyChanged || !this.isConnected) return;
-      state.keyChanged = false;
-      this.refresh();
+DataSourceElement.prototype.invalidate = function invalidate(predicate) {
+  return resolveProviderSource(this)?.invalidate?.(predicate);
+};
+DataSourceElement.prototype.refresh = function refresh(predicate) {
+  return resolveProviderSource(this)?.refresh?.(predicate);
+};
+
+function providerState(element) {
+  let state=PROVIDER_STATE.get(element);
+  if (!state) {
+    state={source:null,client:null,url:'',ownedSource:null,contextSubscribers:new Set()};
+    PROVIDER_STATE.set(element,state);
+  }
+  return state;
+}
+function resolveProviderSource(element) {
+  const state=providerState(element);
+  if (state.source) return state.source;
+  if (state.ownedSource) return state.ownedSource;
+  const url=state.url || element.getAttribute?.('url') || '';
+  if (state.client || url) {
+    state.ownedSource=createDataSource({
+      client:state.client || undefined,
+      url,
+      operations:getDefaultDataSource()?.operations || []
+    });
+    return state.ownedSource;
+  }
+  return getDefaultDataSource();
+}
+function notifyProvider(element) {
+  const state=providerState(element);
+  const source=resolveProviderSource(element);
+  for (const callback of [...state.contextSubscribers]) callback(source);
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener(DATA_SOURCE_CONTEXT_REQUEST, event => {
+    const detail=event.detail;
+    if (typeof detail?.callback !== 'function') return;
+    const path=typeof event.composedPath === 'function' ? event.composedPath() : [];
+    const provider=path.find(node => node instanceof DataSourceElement);
+    if (!provider) return;
+    const source=resolveProviderSource(provider);
+    if (!source) return;
+    event.stopPropagation();
+    detail.resolved=true;
+    detail.callback(source);
+    if (detail.subscribe) {
+      const state=providerState(provider);
+      state.contextSubscribers.add(detail.callback);
+      detail.unsubscribe=()=>state.contextSubscribers.delete(detail.callback);
+    }
+  }, true);
+}
+
+/** Generic resource-context wrapper, separate from the stateful <data-source>. */
+export class DataResource extends DataSourceElement {
+  constructor() {
+    super();
+    this._operation='';
+    this._args={};
+    this._load=null;
+    this._dataSource=null;
+    this._contextSource=null;
+    this._contextUnsubscribe=null;
+    this._sourceUnsubscribe=null;
+  }
+  connectedCallback() {
+    super.connectedCallback();
+    queueMicrotask(()=>{
+      if (!this.isConnected) return;
+      this._contextUnsubscribe=requestDataSourceContext(this, source=>{
+        this._contextSource=source || null;
+        this.#bindSource();
+        this.#loadResource();
+      }, {subscribe:true});
+      this.#bindSource();
+      this.#loadResource();
     });
   }
-});
-
-Object.defineProperty(DataSource.prototype, 'resource', {
-  configurable:true,
-  get() {
-    const state = SOURCE_STATE.get(this);
-    return state ? state.input : sourceResource.get.call(this);
-  },
-  set(value) {
-    const state = sourceState(this);
-    state.input = value;
-    state.loader = typeof value === 'function' ? value : null;
-    if (state.loader) {
-      const shouldLoad = !state.initialized || state.keyChanged || !state.key;
-      state.initialized = true;
-      state.keyChanged = false;
-      if (shouldLoad) this.refresh();
-    } else {
-      state.initialized = true;
-      state.keyChanged = false;
-      sourceResource.set.call(this, value);
+  disconnectedCallback() {
+    this._contextUnsubscribe?.();
+    this._sourceUnsubscribe?.();
+    this._contextUnsubscribe=null;
+    this._sourceUnsubscribe=null;
+    super.disconnectedCallback();
+  }
+  set operation(value) { this._operation=value == null ? '' : String(value); this.#loadResource(); }
+  get operation() { return this._operation; }
+  set args(value) { this._args=value && typeof value === 'object' ? value : {}; this.#loadResource(); }
+  get args() { return this._args; }
+  set load(value) { this._load=typeof value === 'function' ? value : null; this.#loadResource(); }
+  get load() { return this._load; }
+  set dataSource(value) { this._dataSource=value || null; this.#bindSource(); this.#loadResource(); }
+  get dataSource() { return this._dataSource; }
+  set value(value) { this.resource=value; }
+  get value() { return this.resolvedResource; }
+  refresh() { return this.#loadResource(); }
+  #source() { return this._dataSource || this._contextSource || getDefaultDataSource(); }
+  #bindSource() {
+    this._sourceUnsubscribe?.();
+    this._sourceUnsubscribe=null;
+    const source=this.#source();
+    if ((this._operation || this._load) && typeof source?.subscribe === 'function') {
+      this._sourceUnsubscribe=source.subscribe(event=>{
+        if (event?.type==='query') return;
+        this.#loadResource();
+      });
     }
   }
-});
-
-DataSource.prototype.refresh = function refresh() {
-  const state = sourceState(this);
-  let value;
-  try {
-    value = state.loader ? state.loader() : state.input;
-  } catch (error) {
-    this.dispatchEvent(new CustomEvent('data-error',{detail:{error},bubbles:true,composed:true}));
-    throw error;
+  #loadResource() {
+    if (!this.isConnected) return this.resource;
+    const source=this.#source();
+    if (this._load) {
+      if (!source) return this.resource;
+      this.resource=this._load(source.api, source);
+    } else if (this._operation) {
+      const invoke=source?.api?.[this._operation];
+      if (typeof invoke !== 'function') throw new Error(`Unknown DataResource operation: ${this._operation}`);
+      this.resource=invoke(this._args || {});
+    }
+    return this.resource;
   }
-  if (isPromiseLike(value)) sourceResource.set.call(this, undefined);
-  sourceResource.set.call(this, value);
-  return value;
-};
+}
+if (typeof customElements !== 'undefined' && !customElements.get('data-resource')) customElements.define('data-resource',DataResource);
 
-DataSource.prototype.invalidate = function invalidate(keys = this.key) {
-  return invalidateDataSource(keys);
-};
-
-DataSource.prototype.connectedCallback = function connectedCallback() {
-  sourceConnected.call(this);
-  const state = sourceState(this);
-  if (!state.key && this.hasAttribute?.('key')) state.key = this.getAttribute('key') || '';
-  const target = dataEventTarget();
-  if (!target) return;
-  if (!state.onInvalidate) {
-    state.onInvalidate = event => {
-      if (!state.key) return;
-      const keys = normalizeKeys(event.detail?.keys ?? event.detail?.key);
-      if (keys.includes(state.key)) this.refresh();
-    };
-  }
-  target.addEventListener(DATA_INVALIDATE_EVENT, state.onInvalidate);
-};
-
-DataSource.prototype.disconnectedCallback = function disconnectedCallback() {
-  const state = SOURCE_STATE.get(this);
-  const target = dataEventTarget();
-  if (state?.onInvalidate && target) target.removeEventListener(DATA_INVALIDATE_EVENT, state.onInvalidate);
-  sourceDisconnected.call(this);
-};
-
+// Backwards-compatible invalidation bridge. New components should call the
+// resolved DataSource directly; this keeps existing applications functional.
 export function invalidateDataSource(keys, { broadcast = true } = {}) {
-  const normalized = normalizeKeys(keys);
-  if (!normalized.length) return normalized;
-  const target = dataEventTarget();
-  if (!target || typeof CustomEvent === 'undefined') return normalized;
-  target.dispatchEvent(new CustomEvent(DATA_INVALIDATE_EVENT, {
-    detail:{keys:normalized,broadcast:Boolean(broadcast)}
-  }));
-  return normalized;
+  const source=getDefaultDataSource();
+  source?.invalidate?.();
+  if (broadcast && typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(DATA_INVALIDATE_EVENT,{detail:{keys,broadcast:true}}));
+  }
+  return Array.isArray(keys) ? keys : [keys].filter(Boolean);
 }
 
 const tableResource = Object.getOwnPropertyDescriptor(DataTable.prototype, 'resource');
@@ -112,229 +180,88 @@ const tableDisconnected = DataTable.prototype.disconnectedCallback;
 Object.defineProperty(DataTable.prototype, 'columns', {
   configurable:true,
   get() { return tableState(this).columns; },
-  set(value) {
-    const state = tableState(this);
-    state.columns = Array.isArray(value) ? value : [];
-    state.columnsSet = true;
-    scheduleAutoTable(this);
-  }
+  set(value) { const state=tableState(this); state.columns=Array.isArray(value)?value:[]; state.columnsSet=true; scheduleAutoTable(this); }
 });
-
 Object.defineProperty(DataTable.prototype, 'actions', {
   configurable:true,
   get() { return tableState(this).actions; },
-  set(value) {
-    const state = tableState(this);
-    state.actions = Array.isArray(value) ? value : [];
-    state.actionsSet = true;
-    scheduleAutoTable(this);
-  }
+  set(value) { const state=tableState(this); state.actions=Array.isArray(value)?value:[]; state.actionsSet=true; scheduleAutoTable(this); }
 });
-
 Object.defineProperty(DataTable.prototype, 'resource', {
   configurable:true,
   get() { return tableResource.get.call(this); },
   set(value) {
-    const state = tableState(this);
-    const resourceVersion = ++state.resourceVersion;
-    tableResource.set.call(this, value);
-    // Base DataTable resolves Promise resources internally. Schedule the
-    // automatic renderer from the same Promise settlement as well, so an
-    // async resource cannot miss the data-loaded listener during element
-    // connection/upgrade timing.
-    if (isPromiseLike(value)) {
-      Promise.resolve(value).then(
-        () => {
-          if (resourceVersion === tableState(this).resourceVersion) scheduleAutoTable(this);
-        },
-        () => {}
-      );
-    }
+    const state=tableState(this);
+    const resourceVersion=++state.resourceVersion;
+    tableResource.set.call(this,value);
+    if (isPromiseLike(value)) Promise.resolve(value).then(()=>{
+      if (resourceVersion===tableState(this).resourceVersion) scheduleAutoTable(this);
+    },()=>{});
     scheduleAutoTable(this);
   }
 });
-
-DataTable.prototype.connectedCallback = function connectedCallback() {
+DataTable.prototype.connectedCallback=function connectedCallback(){
   tableConnected.call(this);
-  const state = tableState(this);
-  if (!state.onLoaded) state.onLoaded = () => scheduleAutoTable(this);
-  if (!state.onClick) state.onClick = event => handleAutoAction(this, event);
-  this.addEventListener('data-loaded', state.onLoaded);
-  this.addEventListener('click', state.onClick, true);
+  const state=tableState(this);
+  if(!state.onLoaded)state.onLoaded=()=>scheduleAutoTable(this);
+  if(!state.onClick)state.onClick=event=>handleAutoAction(this,event);
+  this.addEventListener('data-loaded',state.onLoaded);
+  this.addEventListener('click',state.onClick,true);
   scheduleAutoTable(this);
 };
-
-DataTable.prototype.disconnectedCallback = function disconnectedCallback() {
-  const state = TABLE_STATE.get(this);
-  if (state?.onLoaded) this.removeEventListener('data-loaded', state.onLoaded);
-  if (state?.onClick) this.removeEventListener('click', state.onClick, true);
+DataTable.prototype.disconnectedCallback=function disconnectedCallback(){
+  const state=TABLE_STATE.get(this);
+  if(state?.onLoaded)this.removeEventListener('data-loaded',state.onLoaded);
+  if(state?.onClick)this.removeEventListener('click',state.onClick,true);
   tableDisconnected.call(this);
 };
 
-// components/index.js registers the custom element during module evaluation.
-// Browsers capture lifecycle callbacks at customElements.define(), so a later
-// connectedCallback patch is not guaranteed to run for an already-defined
-// <data-table>. Delegate generated action clicks at document level as the
-// canonical path; this works regardless of definition/upgrade timing.
-if (typeof document !== 'undefined') {
-  document.addEventListener('click', event => {
-    const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
-    const host = path.find(node => node instanceof DataTable);
-    if (host) handleAutoAction(host, event);
-  }, true);
-}
+// Lifecycle callbacks can be captured before the prototype patch above. Keep
+// generated action dispatch delegated at document level as the canonical path.
+if (typeof document !== 'undefined') document.addEventListener('click',event=>{
+  const path=typeof event.composedPath==='function'?event.composedPath():[];
+  const host=path.find(node=>node instanceof DataTable);
+  if(host)handleAutoAction(host,event);
+},true);
 
-function sourceState(source) {
-  let state = SOURCE_STATE.get(source);
-  if (!state) {
-    state = {key:'',keyChanged:false,input:undefined,loader:null,initialized:false,onInvalidate:null};
-    SOURCE_STATE.set(source,state);
-  }
-  return state;
-}
-
-function tableState(table) {
-  let state = TABLE_STATE.get(table);
-  if (!state) {
-    state = {columns:[],actions:[],columnsSet:false,actionsSet:false,scheduled:false,resourceVersion:0,onLoaded:null,onClick:null};
-    TABLE_STATE.set(table,state);
-  }
-  return state;
-}
-
-function scheduleAutoTable(table) {
-  const state = tableState(table);
-  if (state.scheduled) return;
-  state.scheduled = true;
-  queueMicrotask(() => {
-    state.scheduled = false;
-    if (table.isConnected) renderAutoTable(table);
-  });
-}
-
-function renderAutoTable(host) {
-  const state = tableState(host);
-  if (host.querySelector('template[data-row]')) {
-    host.querySelector(':scope > table[data-metaproject-auto-table]')?.remove();
-    return;
-  }
-  const existing = host.querySelector(':scope > table[data-metaproject-auto-table]');
-  const authoredChildren = [...host.children].filter(child => child !== existing);
-  if (authoredChildren.length && !state.columnsSet && !state.actionsSet) return;
-
-  const rows = Array.isArray(host.resolvedResource) ? host.resolvedResource : [];
-  const columns = normalizeColumns(state.columns, rows);
-  const actions = normalizeActions(state.actions);
-  const table = existing || document.createElement('table');
-  table.setAttribute('data-metaproject-auto-table','');
-
-  const thead = document.createElement('thead');
-  const headRow = document.createElement('tr');
-  for (const column of columns) {
-    const th = document.createElement('th');
-    th.textContent = column.label;
-    headRow.append(th);
-  }
-  if (actions.length) {
-    const th = document.createElement('th');
-    th.textContent = 'Actions';
-    headRow.append(th);
-  }
-  thead.append(headRow);
-
-  const tbody = document.createElement('tbody');
-  for (const row of rows) {
-    const tr = document.createElement('tr');
-    tr.setAttribute('data-metaproject-row','');
-    AUTO_ROWS.set(tr,row);
-    for (const column of columns) {
-      const td = document.createElement('td');
-      td.textContent = formatValue(readDataField(row,column.field));
-      tr.append(td);
-    }
-    if (actions.length) {
-      const td = document.createElement('td');
-      td.setAttribute('data-metaproject-actions','');
-      for (const action of actions) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.setAttribute('data-action',action.name);
-        button.setAttribute('data-metaproject-auto-action','');
-        button.textContent = action.label;
-        if (action.title) button.title = action.title;
-        if (action.className) button.className = action.className;
-        td.append(button);
-      }
-      tr.append(td);
-    }
+function tableState(table){let state=TABLE_STATE.get(table);if(!state){state={columns:[],actions:[],columnsSet:false,actionsSet:false,scheduled:false,resourceVersion:0,onLoaded:null,onClick:null};TABLE_STATE.set(table,state);}return state;}
+function scheduleAutoTable(table){const state=tableState(table);if(state.scheduled)return;state.scheduled=true;queueMicrotask(()=>{state.scheduled=false;if(table.isConnected)renderAutoTable(table);});}
+function renderAutoTable(host){
+  const state=tableState(host);
+  if(host.querySelector('template[data-row]')){host.querySelector(':scope > table[data-metaproject-auto-table]')?.remove();return;}
+  const existing=host.querySelector(':scope > table[data-metaproject-auto-table]');
+  const authoredChildren=[...host.children].filter(child=>child!==existing);
+  if(authoredChildren.length&&!state.columnsSet&&!state.actionsSet)return;
+  const rows=Array.isArray(host.resolvedResource)?host.resolvedResource:[];
+  const columns=normalizeColumns(state.columns,rows);
+  const actions=normalizeActions(state.actions);
+  const table=existing||document.createElement('table');table.setAttribute('data-metaproject-auto-table','');
+  const thead=document.createElement('thead'),headRow=document.createElement('tr');
+  for(const column of columns){const th=document.createElement('th');th.textContent=column.label;headRow.append(th);}
+  if(actions.length){const th=document.createElement('th');th.textContent='Actions';headRow.append(th);}thead.append(headRow);
+  const tbody=document.createElement('tbody');
+  for(const row of rows){
+    const tr=document.createElement('tr');tr.setAttribute('data-metaproject-row','');AUTO_ROWS.set(tr,row);
+    for(const column of columns){const td=document.createElement('td');td.textContent=formatValue(readDataField(row,column.field));tr.append(td);}
+    if(actions.length){const td=document.createElement('td');td.setAttribute('data-metaproject-actions','');for(const action of actions){const button=document.createElement('button');button.type='button';button.setAttribute('data-action',action.name);button.setAttribute('data-metaproject-auto-action','');button.textContent=action.label;if(action.title)button.title=action.title;if(action.className)button.className=action.className;td.append(button);}tr.append(td);}
     tbody.append(tr);
   }
-
-  table.replaceChildren(thead,tbody);
-  if (!existing) host.append(table);
+  table.replaceChildren(thead,tbody);if(!existing)host.append(table);
 }
-
-function handleAutoAction(host, event) {
-  if (AUTO_ACTION_EVENTS.has(event)) return;
-  const button = event.composedPath().find(node => node instanceof Element && node.hasAttribute?.('data-metaproject-auto-action'));
-  if (!button || !host.contains(button)) return;
-  const row = event.composedPath().map(node => AUTO_ROWS.get(node)).find(value => value !== undefined);
-  if (row === undefined) return;
-  AUTO_ACTION_EVENTS.add(event);
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  emitDataAction(button,row,event);
+function handleAutoAction(host,event){
+  if(AUTO_ACTION_EVENTS.has(event))return;
+  const button=event.composedPath().find(node=>node instanceof Element&&node.hasAttribute?.('data-metaproject-auto-action'));
+  if(!button||!host.contains(button))return;
+  const row=event.composedPath().map(node=>AUTO_ROWS.get(node)).find(value=>value!==undefined);
+  if(row===undefined)return;
+  AUTO_ACTION_EVENTS.add(event);event.preventDefault();event.stopImmediatePropagation();emitDataAction(button,row,event);
 }
+function normalizeColumns(configured,rows){const values=configured.length?configured:inferColumns(rows);return values.map(column=>{if(typeof column==='string')return{field:column,label:humanize(column)};const field=String(column?.field??column?.name??'');return{field,label:String(column?.label??humanize(field))};}).filter(column=>column.field);}
+function inferColumns(rows){const row=rows.find(value=>value&&typeof value==='object'&&!Array.isArray(value));return row?Object.keys(row):[];}
+function normalizeActions(actions){return actions.map(action=>{if(typeof action==='string')return{name:action,label:humanize(action),title:'',className:''};const name=String(action?.name??action?.action??'');return{name,label:String(action?.label??humanize(name)),title:String(action?.title??''),className:String(action?.className??action?.class??'')};}).filter(action=>/^[A-Za-z][A-Za-z0-9_.:-]*$/.test(action.name));}
+function formatValue(value){if(value===undefined||value===null)return'';if(typeof value==='object'){try{return JSON.stringify(value);}catch{return String(value);}}return String(value);}
+function humanize(value){return String(value||'').replace(/[_-]+/g,' ').replace(/([a-z0-9])([A-Z])/g,'$1 $2').replace(/^./,char=>char.toUpperCase());}
+function isPromiseLike(value){return value!=null&&(typeof value==='object'||typeof value==='function')&&typeof value.then==='function';}
 
-function normalizeColumns(configured, rows) {
-  const values = configured.length ? configured : inferColumns(rows);
-  return values.map(column => {
-    if (typeof column === 'string') return {field:column,label:humanize(column)};
-    const field = String(column?.field ?? column?.name ?? '');
-    return {field,label:String(column?.label ?? humanize(field))};
-  }).filter(column => column.field);
-}
-
-function inferColumns(rows) {
-  const row = rows.find(value => value && typeof value === 'object' && !Array.isArray(value));
-  return row ? Object.keys(row) : [];
-}
-
-function normalizeActions(actions) {
-  return actions.map(action => {
-    if (typeof action === 'string') return {name:action,label:humanize(action),title:'',className:''};
-    const name = String(action?.name ?? action?.action ?? '');
-    return {
-      name,
-      label:String(action?.label ?? humanize(name)),
-      title:String(action?.title ?? ''),
-      className:String(action?.className ?? action?.class ?? '')
-    };
-  }).filter(action => /^[A-Za-z][A-Za-z0-9_.:-]*$/.test(action.name));
-}
-
-function formatValue(value) {
-  if (value === undefined || value === null) return '';
-  if (typeof value === 'object') {
-    try { return JSON.stringify(value); }
-    catch { return String(value); }
-  }
-  return String(value);
-}
-
-function humanize(value) {
-  return String(value || '').replace(/[_-]+/g,' ').replace(/([a-z0-9])([A-Z])/g,'$1 $2').replace(/^./,char => char.toUpperCase());
-}
-
-function isPromiseLike(value) {
-  return value != null && (typeof value === 'object' || typeof value === 'function') && typeof value.then === 'function';
-}
-
-function normalizeKeys(value) {
-  const values = Array.isArray(value) ? value : [value];
-  return [...new Set(values.map(item => item == null ? '' : String(item).trim()).filter(Boolean))];
-}
-
-function dataEventTarget() {
-  return typeof window !== 'undefined' && typeof window.addEventListener === 'function' ? window : null;
-}
+// Keep the controller reachable from the public components entry as well.
+export { DataSourceConsumerController };
