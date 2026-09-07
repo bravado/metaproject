@@ -1,15 +1,34 @@
-import { DataSource as DataSourceElement, DataTable, emitDataAction, readDataField } from './index.js';
+import {
+  DataSource as DataSourceElement,
+  DataTable,
+  emitDataAction,
+  readDataField,
+  configureMetaproject as configureBase
+} from './index.js';
 import {
   DATA_SOURCE_CONTEXT_REQUEST,
   DataSourceConsumerController,
   createDataSource,
   getDefaultDataSource,
-  requestDataSourceContext
+  requestDataSourceContext,
+  setDefaultDataSource
 } from '../data-source/index.js';
 
 export * from './index.js';
 export * from '../data-source/index.js';
 
+/** Configure API/navigation and establish the runtime default DataSource. */
+export function configureMetaproject(environment = {}) {
+  const source = Object.prototype.hasOwnProperty.call(environment,'dataSource') ? environment.dataSource : undefined;
+  if (source !== undefined) setDefaultDataSource(source);
+  const next = source && environment.api === undefined
+    ? { ...environment, api:source.api }
+    : environment;
+  return configureBase(next);
+}
+
+// Compatibility event retained for older applications. New code invalidates the
+// resolved DataSource directly and does not create application-specific keys.
 export const DATA_INVALIDATE_EVENT = 'metaproject-data-invalidate';
 
 const PROVIDER_STATE = new WeakMap();
@@ -17,9 +36,8 @@ const TABLE_STATE = new WeakMap();
 const AUTO_ROWS = new WeakMap();
 const AUTO_ACTION_EVENTS = new WeakSet();
 
-// <data-source> is a scoped provider. The base class is retained for backwards
-// compatibility with old .resource usage, while source/client/url are the new
-// stateful DataSource contract.
+// <data-source> scopes a DataSource. Its historical .resource property remains
+// available for compatibility, but resource context belongs on <data-resource>.
 for (const [name, descriptor] of Object.entries({
   source:{
     get() { return providerState(this).source || resolveProviderSource(this); },
@@ -76,7 +94,9 @@ if (typeof document !== 'undefined') {
     const detail=event.detail;
     if (typeof detail?.callback !== 'function') return;
     const path=typeof event.composedPath === 'function' ? event.composedPath() : [];
-    const provider=path.find(node => node instanceof DataSourceElement);
+    // <data-resource> extends the historical DataSource element only to reuse
+    // resource-context behavior. It must not shadow an ancestor <data-source>.
+    const provider=path.find(node => node instanceof DataSourceElement && node.localName === 'data-source');
     if (!provider) return;
     const source=resolveProviderSource(provider);
     if (!source) return;
@@ -107,6 +127,7 @@ export class DataResource extends DataSourceElement {
     super.connectedCallback();
     queueMicrotask(()=>{
       if (!this.isConnected) return;
+      this._contextUnsubscribe?.();
       this._contextUnsubscribe=requestDataSourceContext(this, source=>{
         this._contextSource=source || null;
         this.#bindSource();
@@ -123,11 +144,11 @@ export class DataResource extends DataSourceElement {
     this._sourceUnsubscribe=null;
     super.disconnectedCallback();
   }
-  set operation(value) { this._operation=value == null ? '' : String(value); this.#loadResource(); }
+  set operation(value) { this._operation=value == null ? '' : String(value); this.#bindSource(); this.#loadResource(); }
   get operation() { return this._operation; }
   set args(value) { this._args=value && typeof value === 'object' ? value : {}; this.#loadResource(); }
   get args() { return this._args; }
-  set load(value) { this._load=typeof value === 'function' ? value : null; this.#loadResource(); }
+  set load(value) { this._load=typeof value === 'function' ? value : null; this.#bindSource(); this.#loadResource(); }
   get load() { return this._load; }
   set dataSource(value) { this._dataSource=value || null; this.#bindSource(); this.#loadResource(); }
   get dataSource() { return this._dataSource; }
@@ -141,7 +162,7 @@ export class DataResource extends DataSourceElement {
     const source=this.#source();
     if ((this._operation || this._load) && typeof source?.subscribe === 'function') {
       this._sourceUnsubscribe=source.subscribe(event=>{
-        if (event?.type==='query') return;
+        if (event?.type==='query' || event?.type==='query-error') return;
         this.#loadResource();
       });
     }
@@ -162,8 +183,6 @@ export class DataResource extends DataSourceElement {
 }
 if (typeof customElements !== 'undefined' && !customElements.get('data-resource')) customElements.define('data-resource',DataResource);
 
-// Backwards-compatible invalidation bridge. New components should call the
-// resolved DataSource directly; this keeps existing applications functional.
 export function invalidateDataSource(keys, { broadcast = true } = {}) {
   const source=getDefaultDataSource();
   source?.invalidate?.();
@@ -263,5 +282,4 @@ function formatValue(value){if(value===undefined||value===null)return'';if(typeo
 function humanize(value){return String(value||'').replace(/[_-]+/g,' ').replace(/([a-z0-9])([A-Z])/g,'$1 $2').replace(/^./,char=>char.toUpperCase());}
 function isPromiseLike(value){return value!=null&&(typeof value==='object'||typeof value==='function')&&typeof value.then==='function';}
 
-// Keep the controller reachable from the public components entry as well.
 export { DataSourceConsumerController };

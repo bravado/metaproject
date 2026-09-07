@@ -2,7 +2,7 @@
 
 <component-property name="id" type="integer" required example="1"></component-property>
 
-<data-source
+<data-resource
   .resource=${api.getUser({ path: { id } })}
   @save=${event => api.updateUser({
     path: { id: event.detail.resource.id },
@@ -30,4 +30,4 @@
 
     <button type="button" data-action="save" data-validate>Save</button>
   </form>
-</data-source>
+</data-resource>

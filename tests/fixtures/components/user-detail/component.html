@@ -2,7 +2,7 @@
 
 <component-property name="id" type="integer" required example="1"></component-property>
 
-<data-source
+<data-resource
   .resource=${api.getUser({ path: { id } })}
   @edit=${event => navigate('user-edit', { id: event.detail.resource.id })}
 >
@@ -12,4 +12,4 @@
   <p>Status: <status-pill></status-pill></p>
 
   <button data-action="edit">Edit user</button>
-</data-source>
+</data-resource>

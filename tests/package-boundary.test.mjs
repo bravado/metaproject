@@ -6,6 +6,7 @@ test('Metaproject exposes stable subpath imports for runtime and compiler', asyn
   const pkg = JSON.parse(await readFile('package.json', 'utf8'));
   assert.equal(pkg.name, 'metaproject');
   assert.equal(pkg.exports['./components'], './components/reactive.js');
+  assert.equal(pkg.exports['./data-source'], './data-source/index.js');
   assert.equal(pkg.exports['./compiler'], './compiler/index.js');
   assert.equal(pkg.exports['./compiler/browser'], './compiler/browser.js');
   assert.equal(pkg.exports['./api-client'], './api-client/index.js');
@@ -13,6 +14,7 @@ test('Metaproject exposes stable subpath imports for runtime and compiler', asyn
   assert.equal(pkg.exports['./openapi/mutator'], './openapi/mutator.js');
   assert.equal(pkg.exports['./openapi/project-tools'], './openapi/project-tools.js');
   assert.equal(pkg.exports['./mock-api'], './mock-api/index.js');
+  assert.equal(pkg.exports['./mock-api/client'], './mock-api/client.js');
   assert.equal(pkg.exports['./build'], './build/index.js');
   assert.equal(pkg.bin.metaproject, './bin/metaproject.js');
 });
@@ -31,4 +33,7 @@ test('static project builder is part of Metaproject core, not Canvas', async () 
   assert.match(source,/api_root/);
   assert.match(source,/public\/components/);
   assert.match(source,/generateApiClientModule/);
+  assert.match(source,/defaultDataSource/);
+  assert.match(source,/createRestClient/);
+  assert.match(source,/components', 'reactive\.js'/);
 });
