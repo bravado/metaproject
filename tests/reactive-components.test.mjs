@@ -23,3 +23,10 @@ test('data-table supports generic dynamic columns and semantic actions without n
   assert.match(reactive,/emitDataAction\(button,row,event\)/);
   assert.match(reactive,/readDataField\(row,column\.field\)/);
 });
+
+test('async data-table resources explicitly schedule the auto renderer when the promise settles',()=>{
+  assert.match(reactive,/resourceVersion = \+\+state\.resourceVersion/);
+  assert.match(reactive,/Promise\.resolve\(value\)\.then/);
+  assert.match(reactive,/resourceVersion === tableState\(this\)\.resourceVersion/);
+  assert.match(reactive,/scheduleAutoTable\(this\)/);
+});
