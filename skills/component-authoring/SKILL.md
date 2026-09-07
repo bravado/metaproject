@@ -1,6 +1,6 @@
 ---
 name: metaproject-component-authoring
-description: Author or modify Metaproject HTML-first Web Components under components/ using resource context, semantic actions, and api.<operationId>() calls.
+description: Author or modify Metaproject HTML-first Web Components under components/ using scoped DataSource access, resource context, semantic actions, and api.<operationId>() calls.
 ---
 
 # Metaproject Component Authoring
@@ -26,74 +26,108 @@ components/user-edit/
 <title>Edit User</title>
 <component-property name="id" type="integer" required example="1"></component-property>
 
-<data-source .resource=${api.getUser({ path: { id } })}>
+<data-resource .resource=${api.getUser({ path: { id } })}>
   <data-label field="name"></data-label>
-</data-source>
+</data-resource>
 ```
 
-`<title>` and `<component-property>` are metadata and are not rendered as body content. Add a visible heading only when the component UX itself needs one.
+`<title>` and `<component-property>` are metadata and are not rendered as body content. Add a visible heading only when the component UX itself needs one. Use property `example` values for required inputs so standalone rendering has enough context.
 
-Use property `example` values for required inputs so standalone rendering has enough context.
+## DataSource architecture
 
-## Data binding
+Every compiled component can resolve a `DataSource`. Resolution order is:
 
-Use Metaproject's data-aware primitives:
+1. the component's explicit `.dataSource` property;
+2. the nearest `<data-source>` provider;
+3. the application's default DataSource.
 
-- `data-source` provides resource context
-- `data-table` provides row context
-- `data-label field="..."` reads a field
-- `form-input`, `form-textarea`, `form-select`, `form-checkbox`, `form-radio` edit fields in the current resource
+The compiled application creates its default DataSource from `openapi.yaml` plus `metaproject.yaml` `api_root`. Canvas supplies the same contract and switches that default source between Mock and HTTP clients.
 
-Prefer context over manually threading the same object through many nested components.
+A `DataSource` owns state:
 
-## Reactive data sources
+- cached GET/HEAD queries;
+- in-flight request deduplication;
+- subscriptions;
+- invalidation after mutations.
 
-For a one-shot value or Promise, `.resource` may still receive the API call directly:
+The client underneath it is transport only. It exposes REST verbs such as `get`, `post`, `put`, `patch`, and `delete` and does not own application state.
 
-```html
-<data-source .resource=${api.getUser({ path: { id } })}>...</data-source>
-```
-
-When data must be refreshable, pass a loader function and a stable key. The function is re-run on `refresh()` or when that key is invalidated:
-
-```html
-<data-source
-  .key=${`users`}
-  .resource=${() => api.listUsers()}
-  @refresh=${event => event.currentTarget.refresh()}
->
-  ...
-  <button type="button" data-action="refresh">Refresh</button>
-</data-source>
-```
-
-After a successful mutation, invalidate every affected source key from the owning `data-source`:
-
-```html
-<data-source
-  .key=${`user:${id}`}
-  .resource=${() => api.getUser({ path: { id } })}
-  @save=${event => api.updateUser({ path: { id }, body: event.detail.resource })
-    .then(() => event.currentTarget.invalidate([`user:${id}`, 'users']))}
->
-  ...
-</data-source>
-```
-
-All connected keyed sources in the same application refresh when their key is invalidated. Canvas relays these invalidations between component preview boxes as well. Keep keys deterministic and include any parameters that materially change the fetched resource.
-
-## API calls
-
-Use `api.<operationId>()` for modeled backend calls:
+Component source uses the DataSource API facade through the compiler-provided `api` variable:
 
 ```js
 api.getUser({ path: { id } })
 api.updateUser({ path: { id }, body: resource })
 ```
 
-The operation name comes from `openapi.yaml`. Do not hard-code equivalent `fetch()` calls when an Operation exists.
+Do not add component-specific cache keys, invalidation events, refresh tokens, or duplicate request stores. Successful POST/PUT/PATCH/DELETE operations invalidate cached reads through the shared DataSource.
 
-Development uses explicit OpenAPI examples; production uses the generated API client. Component source is the same in both cases.
+A component can force a refresh through the compiler-provided `dataSource` variable:
+
+```html
+<button type="button" @click=${() => dataSource.invalidate()}>Refresh</button>
+```
+
+Applications can override the source for a subtree:
+
+```html
+<data-source .source=${billingSource}>
+  <invoice-list></invoice-list>
+</data-source>
+```
+
+or one component:
+
+```html
+<invoice-list .dataSource=${billingSource}></invoice-list>
+```
+
+A provider can also be created from a direct REST base URL when the default OpenAPI operation table is appropriate:
+
+```html
+<data-source url="/other-api">
+  <user-list></user-list>
+</data-source>
+```
+
+## Resource context
+
+`<data-source>` provides a DataSource, not a record value.
+
+Use `<data-resource>` when a fetched or supplied value should become resource context for inner fields:
+
+```html
+<data-resource .resource=${api.getUser({ path: { id } })}>
+  <data-label field="name"></data-label>
+  <form-input field="email"></form-input>
+</data-resource>
+```
+
+`<data-resource>` may also execute an operation using the resolved DataSource:
+
+```html
+<data-resource
+  operation="getUser"
+  .args=${{ path: { id } }}
+>
+  <data-label field="name"></data-label>
+</data-resource>
+```
+
+Use Metaproject's data-aware primitives:
+
+- `data-source` scopes a DataSource;
+- `data-resource` provides one resolved resource as context;
+- `data-table` provides row context;
+- `data-label field="..."` reads a field;
+- `form-input`, `form-textarea`, `form-select`, `form-checkbox`, `form-radio` edit fields in the current resource.
+
+Prefer context over manually threading the same record through many nested components.
+
+## API calls
+
+Use `api.<operationId>()` for modeled backend calls. The operation name comes from `openapi.yaml`. Do not hard-code equivalent `fetch()` calls when an Operation exists.
+
+Multiple components calling the same GET operation with the same arguments share the DataSource cache and in-flight request. Development uses OpenAPI examples through the Canvas Mock client; production uses the REST client pointed at the project's `api_root`. Component source is unchanged.
 
 ## Actions
 
@@ -107,14 +141,14 @@ Application actions are semantic buttons, not native form submissions:
 Handle the corresponding event on the resource owner:
 
 ```html
-<data-source
+<data-resource
   .resource=${api.getUser({ path: { id } })}
   @save=${event => api.updateUser({
     path: { id: event.detail.resource.id },
     body: event.detail.resource
   })}>
   ...
-</data-source>
+</data-resource>
 ```
 
 Use `data-validate` when an action should validate its containing form first.
@@ -145,21 +179,7 @@ Put dynamic bindings and handlers on `<data-table>` itself, then use context-awa
 </data-table>
 ```
 
-For genuinely dynamic records where columns are not known at authoring time, omit the native row template and give `data-table` column/action descriptors. If `columns` is omitted too, columns are inferred from the first object row:
-
-```html
-<data-table
-  .resource=${rows}
-  .columns=${schema.columns.map(column => ({ field: column.name, label: column.name }))}
-  .actions=${[
-    { name:'edit', label:'Edit' },
-    { name:'delete', label:'Delete', className:'danger' }
-  ]}
-  @edit=${event => openEditor(event.detail.resource)}
-></data-table>
-```
-
-Use this auto-table mode only when the record shape is runtime-defined. Prefer authored table markup for stable application schemas.
+For genuinely dynamic records where columns are not known at authoring time, omit the native row template and give `data-table` column/action descriptors. If `columns` is omitted too, columns are inferred from the first object row.
 
 Use `navigate('<component-tag>', properties)` when one component opens another.
 
