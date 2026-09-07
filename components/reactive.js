@@ -113,6 +113,8 @@ if (typeof document !== 'undefined') {
 
 /** Generic resource-context wrapper, separate from the stateful <data-source>. */
 export class DataResource extends DataSourceElement {
+  static get observedAttributes() { return ['operation']; }
+
   constructor() {
     super();
     this._operation='';
@@ -122,6 +124,9 @@ export class DataResource extends DataSourceElement {
     this._contextSource=null;
     this._contextUnsubscribe=null;
     this._sourceUnsubscribe=null;
+  }
+  attributeChangedCallback(name, oldValue, newValue) {
+    if (name === 'operation' && oldValue !== newValue) this.operation=newValue || '';
   }
   connectedCallback() {
     super.connectedCallback();
