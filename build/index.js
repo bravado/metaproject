@@ -20,8 +20,6 @@ export async function buildProject({ root = process.cwd(), minify, sourcemap } =
   await loadEsbuild();
   const outputAbsolute = safeProjectPath(root, project.outputDir);
 
-  // public/components is generated output. Starting clean prevents removed or
-  // renamed components from leaving stale browser modules behind.
   fs.rmSync(outputAbsolute, { recursive:true, force:true });
   fs.mkdirSync(outputAbsolute, { recursive:true });
 
@@ -33,13 +31,7 @@ export async function buildProject({ root = process.cwd(), minify, sourcemap } =
     sourcemap:sourcemap ?? project.config.build?.sourcemap ?? false
   });
 
-  return {
-    root,
-    config:project.config,
-    outputDir:project.outputDir,
-    apiClient,
-    components
-  };
+  return { root, config:project.config, outputDir:project.outputDir, apiClient, components };
 }
 
 /** Build only the generated OpenAPI client. */
@@ -51,7 +43,6 @@ export function buildProjectApiClient({ root = process.cwd(), outputPath, contex
   const source = generateApiClientModule({ openapi:project.resolvedOpenApi, apiRoot:project.apiRoot });
   fs.mkdirSync(path.dirname(targetAbsolute), { recursive:true });
   fs.writeFileSync(targetAbsolute, source);
-
   return {
     root,
     config:project.config,
@@ -63,13 +54,7 @@ export function buildProjectApiClient({ root = process.cwd(), outputPath, contex
   };
 }
 
-/**
- * Compile HTML-first project components into browser-native ESM assets.
- *
- * Output contains one entry module per component, index.js, runtime.js, api.js,
- * a manifest, and optional shared chunks. No output module contains bare npm
- * imports, so a PHP application can serve public/components directly.
- */
+/** Compile HTML-first project components into browser-native ESM assets. */
 export async function buildProjectComponents({ root = process.cwd(), context, minify = false, sourcemap = false } = {}) {
   root = path.resolve(root);
   const project = context || loadProjectBuildContext(root);
@@ -88,8 +73,6 @@ export async function buildProjectComponents({ root = process.cwd(), context, mi
       components:{}
     };
 
-    // API is also an esbuild entry so all generated imports are internal and
-    // output-relative paths remain correct even when code splitting is used.
     const apiSource = generateApiClientModule({ openapi:project.resolvedOpenApi, apiRoot:project.apiRoot });
     const apiEntry = path.join(temp, 'api.js');
     fs.writeFileSync(apiEntry, apiSource);
@@ -109,14 +92,7 @@ export async function buildProjectComponents({ root = process.cwd(), context, mi
         .map(dependency => `import './${dependency}.js';`)
         .join('\n');
       const scriptImport = component.scriptPath ? `metaproject-helper:${component.tag}` : null;
-      const compiled = compileComponentModule({
-        tag:component.tag,
-        path:component.relativeHtmlPath,
-        source,
-        css,
-        scriptImport,
-        scriptSource
-      });
+      const compiled = compileComponentModule({ tag:component.tag, path:component.relativeHtmlPath, source, css, scriptImport, scriptSource });
       const generatedPath = path.join(temp, `${component.tag}.js`);
       fs.writeFileSync(generatedPath, `import './runtime.js';\n${dependencyImports}${dependencyImports ? '\n' : ''}${compiled}`);
       entryPoints[component.tag] = generatedPath;
@@ -153,20 +129,9 @@ export async function buildProjectComponents({ root = process.cwd(), context, mi
     });
 
     fs.writeFileSync(path.join(outputAbsolute, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
-
-    const outputFiles = walk(outputAbsolute)
-      .map(file => normalizeProjectPath(path.relative(root, file)))
-      .sort();
+    const outputFiles = walk(outputAbsolute).map(file => normalizeProjectPath(path.relative(root, file))).sort();
     assertBrowserNativeOutput(outputAbsolute);
-
-    return {
-      sourceDir:project.componentSourceDir,
-      outputDir:project.outputDir,
-      count:components.size,
-      tags:[...components.keys()].sort(),
-      manifest,
-      files:outputFiles
-    };
+    return { sourceDir:project.componentSourceDir, outputDir:project.outputDir, count:components.size, tags:[...components.keys()].sort(), manifest, files:outputFiles };
   } finally {
     fs.rmSync(temp, { recursive:true, force:true });
   }
@@ -177,20 +142,13 @@ export function discoverProjectComponents(root, sourceDir = DEFAULT_COMPONENT_SO
   const sourceAbsolute = safeProjectPath(root, sourceDir);
   const out = new Map();
   if (!fs.existsSync(sourceAbsolute)) return out;
-
   for (const htmlPath of walk(sourceAbsolute).filter(file => path.basename(file) === 'component.html')) {
     const tag = tagFromComponentPath(htmlPath);
     if (out.has(tag)) throw new Error(`Duplicate Metaproject component tag <${tag}>.`);
     const dir = path.dirname(htmlPath);
     const scriptPath = ['component.ts', 'component.js'].map(name => path.join(dir, name)).find(file => fs.existsSync(file)) || null;
     const stylePath = path.join(dir, 'style.css');
-    out.set(tag, {
-      tag,
-      htmlPath,
-      relativeHtmlPath:normalizeProjectPath(path.relative(root, htmlPath)),
-      scriptPath,
-      stylePath:fs.existsSync(stylePath) ? stylePath : null
-    });
+    out.set(tag, { tag, htmlPath, relativeHtmlPath:normalizeProjectPath(path.relative(root, htmlPath)), scriptPath, stylePath:fs.existsSync(stylePath) ? stylePath : null });
   }
   return out;
 }
@@ -203,7 +161,6 @@ export function loadProjectBuildContext(root = process.cwd()) {
   const openapiPath = normalizeProjectPath(config.openapi || DEFAULT_OPENAPI_PATH);
   const openapiAbsolute = safeProjectPath(root, openapiPath);
   if (!fs.existsSync(openapiAbsolute)) throw new Error(`OpenAPI file not found: ${openapiPath}. Run "npx metaproject init" first.`);
-
   const openapi = parseDocument(fs.readFileSync(openapiAbsolute, 'utf8'), openapiPath) || {};
   const resolvedOpenApi = resolveOpenApiRefs(openapi, {
     sourcePath:openapiPath,
@@ -212,19 +169,22 @@ export function loadProjectBuildContext(root = process.cwd()) {
   });
   const apiRoot = config.api_root ?? '';
   if (typeof apiRoot !== 'string') throw new Error('metaproject.yaml api_root must be a string.');
-
   const componentSourceDir = normalizeProjectPath(config.components?.source || DEFAULT_COMPONENT_SOURCE);
   const outputDir = normalizeProjectPath(config.components?.output || DEFAULT_COMPONENT_OUTPUT);
-
   return { root, config, openapiPath, openapiAbsolute, openapi, resolvedOpenApi, apiRoot, componentSourceDir, outputDir };
 }
 
 function runtimeEntrySource() {
-  return `import api, { createApiClient, DEFAULT_API_ROOT, OPERATIONS, ApiClientError } from './api.js';\n` +
+  return `import { createApiClient, DEFAULT_API_ROOT, OPERATIONS, ApiClientError } from './api.js';\n` +
     `import { configureMetaproject as configureRuntime } from 'metaproject/components';\n` +
-    `configureRuntime({ api });\n` +
-    `export { api, createApiClient, DEFAULT_API_ROOT, OPERATIONS, ApiClientError };\n` +
-    `export function configureMetaproject(options = {}) { return configureRuntime({ ...options, api: options.api ?? api }); }\n`;
+    `import { createRestClient, createDataSource, setDefaultDataSource } from 'metaproject/data-source';\n` +
+    `export const defaultClient = createRestClient({ baseUrl: DEFAULT_API_ROOT });\n` +
+    `export const defaultDataSource = createDataSource({ client: defaultClient, operations: Object.values(OPERATIONS) });\n` +
+    `setDefaultDataSource(defaultDataSource);\n` +
+    `export const api = defaultDataSource.api;\n` +
+    `configureRuntime({ dataSource: defaultDataSource, api });\n` +
+    `export { createApiClient, createRestClient, createDataSource, DEFAULT_API_ROOT, OPERATIONS, ApiClientError };\n` +
+    `export function configureMetaproject(options = {}) { const dataSource = options.dataSource ?? defaultDataSource; return configureRuntime({ ...options, dataSource, api: options.api ?? dataSource.api }); }\n`;
 }
 
 function indexEntrySource(tags) {
@@ -234,19 +194,19 @@ function indexEntrySource(tags) {
 
 async function loadEsbuild() {
   try { return await import('esbuild'); }
-  catch (error) {
-    throw new Error(`Metaproject build requires its esbuild dependency. Reinstall metaproject with npm before building.\n${error.message}`);
-  }
+  catch (error) { throw new Error(`Metaproject build requires its esbuild dependency. Reinstall metaproject with npm before building.\n${error.message}`); }
 }
 
 function metaprojectSelfResolver(components) {
   const require = createRequire(import.meta.url);
   const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-  const componentsPath = path.join(packageRoot, 'components', 'index.js');
+  const componentsPath = path.join(packageRoot, 'components', 'reactive.js');
+  const dataSourcePath = path.join(packageRoot, 'data-source', 'index.js');
   return {
     name:'metaproject-self',
     setup(build) {
       build.onResolve({ filter:/^metaproject\/components$/ }, () => ({ path:componentsPath }));
+      build.onResolve({ filter:/^metaproject\/data-source$/ }, () => ({ path:dataSourcePath }));
       build.onResolve({ filter:/^lit$/ }, () => ({ path:require.resolve('lit') }));
       build.onResolve({ filter:/^metaproject-helper:/ }, args => {
         const tag=args.path.slice('metaproject-helper:'.length);
@@ -278,19 +238,13 @@ function safeProjectPath(root, relative) {
   if (rel.startsWith('..') || path.isAbsolute(rel)) throw new Error(`Path escapes the Metaproject root: ${relative}`);
   return target;
 }
-
-function normalizeProjectPath(value) {
-  return String(value || '').replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/$/, '');
-}
-
+function normalizeProjectPath(value) { return String(value || '').replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/$/, ''); }
 function walk(dir) {
   if (!fs.existsSync(dir)) return [];
   const files = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes:true })) {
     const target = path.join(dir, entry.name);
-    if (entry.isDirectory()) files.push(...walk(target));
-    else files.push(target);
+    if (entry.isDirectory()) files.push(...walk(target)); else files.push(target);
   }
   return files;
 }
-
