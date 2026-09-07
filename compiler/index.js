@@ -1,6 +1,6 @@
 export const BASE_COMPONENT_CSS = `:host{display:block;box-sizing:border-box;max-width:100%;min-width:0}*,*::before,*::after{box-sizing:border-box;min-width:0}`;
 
-const BUILTIN_TAGS = new Set(['data-source', 'data-table', 'data-label', 'form-input', 'form-textarea', 'form-select', 'form-checkbox', 'form-radio', 'component-property']);
+const BUILTIN_TAGS = new Set(['data-source', 'data-resource', 'data-table', 'data-label', 'form-input', 'form-textarea', 'form-select', 'form-checkbox', 'form-radio', 'component-property']);
 
 export function parseComponentSource(source, { tag, path = '' } = {}) {
   source = String(source ?? '');
@@ -146,7 +146,7 @@ export function compileComponentModule({ tag, path = '', source, css = '', scrip
   const styles = `static styles = unsafeCSS(${JSON.stringify(BASE_COMPONENT_CSS + '\n' + (css || ''))});`;
 
   return `import { LitElement, html, nothing, unsafeCSS } from 'lit';
-import { ResourceContextController, requestResourceContext, metaprojectEnvironment } from 'metaproject/components';
+import { ResourceContextController, requestResourceContext, metaprojectEnvironment, DataSourceConsumerController } from 'metaproject/components';
 ${scriptImportLine}
 
 export const metaprojectComponent = ${JSON.stringify({ tag, title:definition.title, properties:definition.properties, actions:definition.actions, actionOperations:definition.actionOperations })};
@@ -157,6 +157,7 @@ export class ${className} extends LitElement {
 
   constructor() {
     super();
+    this.__dataSourceConsumer = new DataSourceConsumerController(this);
 ${defaults || '    // No declared defaults.'}
     ${contextCtor}
   }
@@ -164,7 +165,10 @@ ${defaults || '    // No declared defaults.'}
   ${contextLifecycle}
 
   render() {
-    const { api, navigate } = metaprojectEnvironment();
+    const environment = metaprojectEnvironment();
+    const dataSource = this.__dataSourceConsumer.resolve(this.dataSource, environment.dataSource);
+    const api = dataSource?.api ?? environment.api;
+    const navigate = environment.navigate;
     ${destructureProperties}
     ${destructureHelpers}
     const __strings = ${JSON.stringify(template.strings)};
@@ -173,6 +177,7 @@ ${defaults || '    // No declared defaults.'}
   }
 }
 
+${className}.createProperty('dataSource',{attribute:false});
 if (!customElements.get(${JSON.stringify(tag)})) customElements.define(${JSON.stringify(tag)}, ${className});
 `;
 }
