@@ -134,7 +134,21 @@ Object.defineProperty(DataTable.prototype, 'resource', {
   configurable:true,
   get() { return tableResource.get.call(this); },
   set(value) {
+    const state = tableState(this);
+    const resourceVersion = ++state.resourceVersion;
     tableResource.set.call(this, value);
+    // Base DataTable resolves Promise resources internally. Schedule the
+    // automatic renderer from the same Promise settlement as well, so an
+    // async resource cannot miss the data-loaded listener during element
+    // connection/upgrade timing.
+    if (isPromiseLike(value)) {
+      Promise.resolve(value).then(
+        () => {
+          if (resourceVersion === tableState(this).resourceVersion) scheduleAutoTable(this);
+        },
+        () => {}
+      );
+    }
     scheduleAutoTable(this);
   }
 });
@@ -168,7 +182,7 @@ function sourceState(source) {
 function tableState(table) {
   let state = TABLE_STATE.get(table);
   if (!state) {
-    state = {columns:[],actions:[],columnsSet:false,actionsSet:false,scheduled:false,onLoaded:null,onClick:null};
+    state = {columns:[],actions:[],columnsSet:false,actionsSet:false,scheduled:false,resourceVersion:0,onLoaded:null,onClick:null};
     TABLE_STATE.set(table,state);
   }
   return state;
