@@ -13,9 +13,10 @@ test('HTML components infer tag contract without an outer template wrapper', () 
   assert.equal(definition.properties[0].example,1);
   assert.ok(!definition.body.includes('<title>'));
   assert.ok(!definition.body.includes('<component-property'));
-  assert.match(definition.body,/<data-source/);
+  assert.match(definition.body,/<data-resource/);
   assert.deepEqual(definition.actions.sort(),['edit']);
   assert.ok(definition.dependencies.includes('status-pill'));
+  assert.ok(!definition.dependencies.includes('data-resource'));
 });
 
 test('component dependency analysis produces API and component navigation edges', () => {
@@ -24,7 +25,6 @@ test('component dependency analysis produces API and component navigation edges'
   assert.ok(!definition.relationships.some(x=>x.type==='calls'&&x.target==='updateUser'));
   assert.ok(definition.relationships.some(x=>x.type==='navigates-to'&&x.target==='user-edit'));
 });
-
 
 test('edit component owns the update operation and form controls remain built-ins', () => {
   const definition=parseComponentSource(editSource,{tag:'user-edit'});
@@ -52,10 +52,14 @@ test('native row templates are static and dynamic handlers belong on data-table'
   );
 });
 
-test('compiled modules are ordinary Lit custom elements using Metaproject runtime', () => {
+test('compiled modules are ordinary Lit custom elements with scoped DataSource resolution', () => {
   const module=compileComponentModule({tag:'user-detail',source:detailSource,css:'h1{font-weight:700}'});
   assert.match(module,/class UserDetailElement extends LitElement/);
   assert.match(module,/metaprojectEnvironment\(\)/);
+  assert.match(module,/DataSourceConsumerController/);
+  assert.match(module,/this\.__dataSourceConsumer\.resolve\(this\.dataSource, environment\.dataSource\)/);
+  assert.match(module,/const api = dataSource\?\.api \?\? environment\.api/);
+  assert.match(module,/createProperty\('dataSource',\{attribute:false\}\)/);
   assert.match(module,/customElements\.define\("user-detail"/);
   assert.match(module,/static properties = \{"id": \{ type:Number \}\}/);
   assert.match(module,/unsafeCSS/);
@@ -89,7 +93,6 @@ test('all bundled HTML components compile to syntactically valid modules', async
     }
   } finally { await rm(temp,{recursive:true,force:true}); }
 });
-
 
 test('compiled HTML components get safe default host sizing', async () => {
   const source = await readFile('compiler/index.js', 'utf8');
