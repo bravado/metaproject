@@ -21,7 +21,7 @@ test('package ships focused architecture, adoption, runtime, and host integratio
   const existing=await read('docs/adopting-existing-application.md');
   const dataSource=await read('docs/data-source.md');
   const using=await read('docs/using-components.md');
-  assert.match(architecture,/API contract \(OpenAPI\)/);
+  assert.match(architecture,/OpenAPI is the API boundary/i);
   assert.match(scratch,/Getting started from scratch/);
   assert.match(existing,/Add Metaproject to an existing application/);
   assert.match(existing,/import-openapi/);

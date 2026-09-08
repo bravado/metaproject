@@ -20,7 +20,7 @@ test('data-source owns request/select, flat parameters, and generic data-operati
   assert.match(source,/invokeDataRequest\(operationId/);
   assert.match(source,/camelToKebab\(parameter\.name\)/);
   assert.match(source,/data-operation/);
-  assert.match(source,/operation\.requestBody \? resource : undefined/);
+  assert.match(source,/operationBodyFromResource\(operation,resource\)/);
   assert.match(source,/selectDataSchema/);
   assert.doesNotMatch(source,/save/);
 });

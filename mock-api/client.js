@@ -31,10 +31,10 @@ export function createMockClient(openapi, options = {}) {
     },
     reset(){mutations.length=0;},
     get(){throw new Error('MockClient generic get() requires an OpenAPI operation. Use <data-source request="operationId">.');},
-    post(){throw new Error('MockClient generic post() requires an OpenAPI operation. Use <data-source save="operationId">.');},
-    put(){throw new Error('MockClient generic put() requires an OpenAPI operation. Use <data-source save="operationId">.');},
-    patch(){throw new Error('MockClient generic patch() requires an OpenAPI operation. Use <data-source save="operationId">.');},
-    delete(){throw new Error('MockClient generic delete() requires an OpenAPI operation.');}
+    post(){throw new Error('MockClient generic post() requires an OpenAPI operation. Use data-operation="operationId" on an action element.');},
+    put(){throw new Error('MockClient generic put() requires an OpenAPI operation. Use data-operation="operationId" on an action element.');},
+    patch(){throw new Error('MockClient generic patch() requires an OpenAPI operation. Use data-operation="operationId" on an action element.');},
+    delete(){throw new Error('MockClient generic delete() requires an OpenAPI operation. Use data-operation="operationId" on an action element.');}
   });
 }
 
@@ -43,14 +43,14 @@ function applyMutations(readOperation,readArgs,base,mutations) {
   for(const mutation of mutations) {
     const method=String(mutation.operation.method||'').toUpperCase();
 
-    if(sameResource(readOperation,readArgs,mutation.operation,mutation.args)) {
-      if(method==='DELETE')value=undefined;
-      else if(method==='PUT'||method==='PATCH')value=mergeObject(value,mutation.args.body);
+    if(method==='POST' && sameCollection(readOperation,readArgs,mutation.operation,mutation.args)) {
+      value=appendCollection(value,mergeObject(mutation.args.body,mutation.result));
       continue;
     }
 
-    if(sameCollection(readOperation,readArgs,mutation.operation,mutation.args)) {
-      if(method==='POST')value=appendCollection(value,mergeObject(mutation.args.body,mutation.result));
+    if(sameResource(readOperation,readArgs,mutation.operation,mutation.args)) {
+      if(method==='DELETE')value=undefined;
+      else if(method==='PUT'||method==='PATCH')value=mergeObject(value,mutation.args.body);
       continue;
     }
 

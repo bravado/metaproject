@@ -25,7 +25,7 @@ test('authoring skills teach the lean portable primitives',async()=>{
   assert.match(authoring,/<data-table>/);
   assert.match(authoring,/<data-form>/);
   assert.match(authoring,/OpenAPI `operationId`/);
-  assert.doesNotMatch(authoring,/api\.<operationId>/);
+  assert.doesNotMatch(authoring,/\bapi\.[A-Za-z_$][\w$]*\s*\(/);
   assert.doesNotMatch(authoring,/data-resource/);
   assert.match(creator,/multiple `<data-source>`/i);
   assert.match(creator,/reusable Web Components/i);

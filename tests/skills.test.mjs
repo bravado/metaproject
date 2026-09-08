@@ -12,7 +12,8 @@ test('skills cover new projects, existing code, existing OpenAPI, and component 
   assert.match(bootstrap,/from scratch/i);
   assert.match(bootstrap,/OpenAPI/);
   assert.match(analysis,/existing application/i);
-  assert.match(analysis,/routes\/controllers\/handlers/i);
+  assert.match(analysis,/route\/router definitions/i);
+  assert.match(analysis,/controllers\/handlers\/actions/i);
   assert.match(importing,/import-openapi/);
   assert.match(importing,/multi-file/i);
   assert.match(creator,/reusable Web Components/i);
@@ -31,7 +32,7 @@ test('component skills teach the declarative primitive API',()=>{
     assert.match(source,/data-source/);
     assert.match(source,/data-table/);
     assert.match(source,/data-form/);
-    assert.doesNotMatch(source,/api\.<operationId>/);
+    assert.doesNotMatch(source,/\bapi\.[A-Za-z_$][\w$]*\s*\(/);
     assert.doesNotMatch(source,/data-resource/);
   }
   assert.match(creator,/multiple `<data-source>`/i);

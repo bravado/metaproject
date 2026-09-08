@@ -40,14 +40,14 @@ test('Canvas metadata is optional Core extension data rather than a project requ
 
 test('unknown component operations are diagnosed by the shared Core index',()=>{
   const index=buildProjectIndex({
-    files:{'ui/problem/component.html':'<title>Problem</title><data-source request="doesNotExist"></data-source>'},
+    files:{'ui/problem-view/component.html':'<title>Problem</title><data-source request="doesNotExist"></data-source>'},
     openapi,
     project:{components:{source:'ui'}}
   });
   const diagnostic=index.diagnostics.find(value=>value.code==='unknown-operation');
   assert.ok(diagnostic);
-  assert.equal(diagnostic.resource,'problem');
-  assert.equal(diagnostic.sourcePath,'ui/problem/component.html');
+  assert.equal(diagnostic.resource,'problem-view');
+  assert.equal(diagnostic.sourcePath,'ui/problem-view/component.html');
 });
 
 test('relatedRelationships only returns relationships whose endpoints are present',()=>{

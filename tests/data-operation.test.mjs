@@ -8,7 +8,7 @@ const form=await readFile('components/data-form.js','utf8');
 test('data-operation is executed by the nearest data-source using current resource context',()=>{
   assert.match(source,/data-operation/);
   assert.match(source,/requestResourceContext\(trigger/);
-  assert.match(source,/operation\.requestBody \? resource : undefined/);
+  assert.match(source,/operationBodyFromResource\(operation,resource\)/);
   assert.match(source,/#parameters\(operation,resource\)/);
   assert.match(source,/operation-complete/);
   assert.doesNotMatch(source,/get save\(\)|set save\(|addEventListener\('save'/);
