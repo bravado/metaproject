@@ -1,6 +1,6 @@
 ---
 name: metaproject-component-authoring
-description: Author Metaproject HTML-first components using declarative data-source requests, automatic data-table/data-form rendering, semantic actions, and navigation.
+description: Author Metaproject HTML-first components using declarative data-source requests, automatic data-table/data-form rendering, direct data-operation actions, and navigation.
 ---
 
 # Metaproject Component Authoring
@@ -11,9 +11,10 @@ Canonical source lives in `components/`. Generated `public/components/` files ar
 
 Use these primitives:
 
-- `<data-source>` executes one OpenAPI request and provides its result as resource context.
+- `<data-source>` executes one OpenAPI read request and provides its result as resource context.
 - `<data-table>` consumes the nearest resource and renders it as a table automatically. Add explicit table markup only when the default table is not enough.
-- `<data-form>` consumes the nearest object resource, generates fields from OpenAPI schema/runtime types, and emits `save`.
+- `<data-form>` consumes the nearest object resource and generates editable fields from OpenAPI schema/runtime types.
+- `data-operation="operationId"` on an action element executes that OpenAPI operation through the nearest `<data-source>`.
 - `<data-label>` and `form-*` remain available for explicitly authored UIs.
 
 Do not call `api.<operationId>()`. Components do not receive an API facade.
@@ -68,21 +69,29 @@ Use multiple `<data-source>` elements. Do not build Promise composition loaders.
 </data-source>
 ```
 
-## Save
+## Operations
 
-`data-source` may declare one mutation operation with `save`:
+Put the mutation operation directly on the action element:
 
 ```html
-<data-source
-  request="getUser"
-  save="updateUser"
-  id=${id}
->
-  <data-form></data-form>
+<data-source request="getUser" id=${id}>
+  <data-form>
+    <button data-operation="updateUser">Save</button>
+  </data-form>
 </data-source>
 ```
 
-`data-form` emits `save` with the edited resource. `data-source` sends that resource as the mutation body. Successful mutations invalidate shared cached reads automatically.
+The nearest `<data-source>` supplies operation parameters from its flat attributes. Missing operation parameters may be taken from the current resource context, which makes row actions work naturally. If the OpenAPI operation declares a request body, the current resource becomes that body. Inside `<data-form>`, that is the edited object.
+
+Successful mutations invalidate shared cached reads automatically.
+
+Use the same primitive for other operations:
+
+```html
+<button data-operation="deleteUser">Delete</button>
+```
+
+Do not use `save=` on `<data-source>` and do not build event-to-operation maps.
 
 ## Tables
 
@@ -106,6 +115,8 @@ For custom row markup, use a static native row template. Never put Lit expressio
 ## Forms
 
 `data-form` generates controls from the object response schema when available, then falls back to runtime value types. Strings become text inputs, numbers numeric inputs, booleans checkboxes, enums selects, and objects/arrays JSON textareas. `readOnly` schema properties are disabled.
+
+`data-form` does not generate a Save button. Put authored action elements inside it; they are rendered through its slot and see the edited object as their resource context.
 
 Use explicit `form-*` controls only when the automatic form is not sufficient.
 
