@@ -20,6 +20,7 @@ export class DataTable extends HTMLElement {
   #renderQueued=false;
   #columns=[];
   #observer=null;
+  #actionOverrides=null;
 
   constructor() {
     super();
@@ -63,6 +64,8 @@ export class DataTable extends HTMLElement {
   get resolvedResource() { return this.#resource; }
   set columns(value) { this.#columns=Array.isArray(value)?value:[]; this.#schedule(); }
   get columns() { return this.#columns; }
+  set actionOverrides(value) { this.#actionOverrides=Array.isArray(value)&&value.length?value:null; this.#schedule(); }
+  get actionOverrides() { return this.#actionOverrides; }
   set actions(_value) { throw new Error('<data-table>.actions was removed. Author data-action/data-operation HTML inside <data-table> instead.'); }
 
   #schedule() {
@@ -93,8 +96,9 @@ export class DataTable extends HTMLElement {
     }
   }
   #renderAuto() {
-    const actionTemplates=authoredActionTemplates(this);
-    for (const source of actionTemplates) markActionTemplate(source);
+    const authored=authoredActionTemplates(this);
+    for (const source of authored) markActionTemplate(source);
+    const actionTemplates=this.#actionOverrides || authored;
 
     let table=this.querySelector(':scope > table[data-metaproject-auto]');
     if (!table) { table=document.createElement('table');table.setAttribute('data-metaproject-auto','');this.append(table); }
@@ -170,7 +174,8 @@ function markActionTemplate(element){
 }
 function cloneActionTemplate(source){
   const clone=source.cloneNode(true);
-  const authoredHidden=source.getAttribute(ACTION_TEMPLATE_ATTRIBUTE)==='hidden';
+  const templateState=source.getAttribute(ACTION_TEMPLATE_ATTRIBUTE);
+  const authoredHidden=templateState?templateState==='hidden':source.hasAttribute('hidden');
   clone.removeAttribute(ACTION_TEMPLATE_ATTRIBUTE);
   clone.toggleAttribute('hidden',authoredHidden);
   return clone;
