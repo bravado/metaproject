@@ -18,6 +18,17 @@ A typical collection component is just:
 </data-source>
 ```
 
+A collection with a row action remains HTML-first:
+
+```html
+<title>Users</title>
+<data-source request="listUsers">
+  <data-table @edit=${event => navigate('user-edit', { id:event.detail.resource.id })}>
+    <button data-action="edit">Edit</button>
+  </data-table>
+</data-source>
+```
+
 A parameterized component can expose its active context through the Canvas title:
 
 ```html
@@ -41,6 +52,7 @@ Rules:
 - put mutations directly on action elements with `data-operation="operationId"`;
 - never generate `save=` on `<data-source>` or event-to-operation maps;
 - let data-table and data-form render automatically unless the UX genuinely needs explicit markup;
+- put automatic table row actions directly inside `<data-table>` as `data-action` / `data-operation` HTML; never generate `.actions` arrays;
 - use semantic `data-action` events only for UI/navigation actions that are not API operations;
 - use `navigate()` for component-to-component selection flows;
 - keep required component property examples small so standalone previews and initial Canvas titles are useful;
