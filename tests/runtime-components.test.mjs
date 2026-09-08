@@ -15,12 +15,14 @@ test('canonical runtime registers only the lean data primitives',()=>{
   assert.doesNotMatch(index,/data-resource|reactive\.js|DataSourceStore/);
 });
 
-test('data-source owns request/save/select and flat operation parameters',()=>{
-  assert.match(source,/\['request','save','select'\]/);
+test('data-source owns request/select, flat parameters, and generic data-operation execution',()=>{
+  assert.match(source,/\['request','select'\]/);
   assert.match(source,/invokeDataRequest\(operationId/);
   assert.match(source,/camelToKebab\(parameter\.name\)/);
-  assert.match(source,/event\.detail\?\.resource/);
+  assert.match(source,/data-operation/);
+  assert.match(source,/operation\.requestBody \? resource : undefined/);
   assert.match(source,/selectDataSchema/);
+  assert.doesNotMatch(source,/save/);
 });
 
 test('data-table inherits resource context and auto-renders arrays and objects',()=>{
@@ -31,13 +33,15 @@ test('data-table inherits resource context and auto-renders arrays and objects',
   assert.match(table,/template\[data-row\]/);
 });
 
-test('data-form inherits object context and generates typed controls',()=>{
+test('data-form inherits object context, generates typed controls, and exposes edited context',()=>{
   assert.match(form,/class DataForm extends LitElement/);
   assert.match(form,/requestResourceContext\(this/);
+  assert.match(form,/new ResourceContextController\(this,\(\)=>this\._value/);
   assert.match(form,/schema\?\.format==='email'/);
   assert.match(form,/type==='boolean'/);
   assert.match(form,/Array\.isArray\(schema\?\.enum\)/);
-  assert.match(form,/new CustomEvent\('save'/);
+  assert.match(form,/<slot><\/slot>/);
+  assert.doesNotMatch(form,/new CustomEvent\('save'/);
 });
 
 test('explicit field controls still mutate resource context',()=>{
