@@ -24,6 +24,7 @@ export function parseComponentSource(source,{tag,path=''}={}){
   if(/<data-resource\b/i.test(body))throw new Error(`${path||tag}: <data-resource> was removed. Use <data-source request="operationId"> to fetch/provide data.`);
   if(/\bapi\.[A-Za-z_$][\w$]*\s*\(/.test(body))throw new Error(`${path||tag}: direct api.operationId() calls were removed. Use <data-source request="operationId">.`);
   if(/<data-source\b[^>]*\bsave\s*=/i.test(body))throw new Error(`${path||tag}: data-source save= was removed. Put data-operation="operationId" on the action element instead.`);
+  if(/<data-table\b[^>]*\.actions\s*=/i.test(body))throw new Error(`${path||tag}: data-table .actions was removed. Put data-action/data-operation elements inside <data-table> instead.`);
   assertStaticNativeTemplates(body,path||tag);
   const actions=unique([...body.matchAll(/\bdata-action\s*=\s*(['"])([^'"]+)\1/gi)].map(x=>x[2].trim()).filter(Boolean));
   const dependencies=unique([...body.matchAll(/<([a-z][\w.-]*-[\w.-]+)(?:\s|>|\/)/gi)].map(x=>x[1].toLowerCase()).filter(x=>x!==tag&&!BUILTIN_TAGS.has(x)));
