@@ -1,8 +1,28 @@
-# metaproject
+# Metaproject
 
-Metaproject is a build-time/runtime toolkit for HTML-first Web Components backed by OpenAPI.
+Metaproject is the glue between your HTTP API and reusable Web Components.
+
+```text
+API / backend
+    │
+    │ OpenAPI 3.x
+    ▼
+Metaproject Core
+    │
+    ├─ shared data-source runtime
+    ├─ HTML-first component compiler
+    ├─ API/component validation and tooling
+    └─ static browser build
+    │
+    ▼
+Web Components usable by any application
+```
+
+The generated components are ordinary browser custom elements. Use them in plain HTML/JavaScript, Lit, framework wrappers, server-rendered applications, or optional Metaproject Canvas compositions. Canvas is development tooling; it is not a runtime dependency of Core or the built components.
 
 ## Project shape
+
+A minimal project is:
 
 ```text
 metaproject.yaml
@@ -11,19 +31,121 @@ components/
 public/components/       # generated
 ```
 
-`metaproject.yaml` defines `api_root`, component paths, and Canvas layout.
+Default `metaproject.yaml`:
 
-## Lean data primitives
+```yaml
+version: 1
+name: Example
+api_root: /api
+openapi: openapi.yaml
+components:
+  source: components
+  output: public/components
+```
 
-Components use declarative data primitives instead of calling an API facade directly.
+The OpenAPI path and component directories are configurable.
+
+## Choose your starting point
+
+### New project
+
+```bash
+npm install --save-dev metaproject
+npx metaproject init
+```
+
+Then design the browser-facing API contract and create components. See [Getting started from scratch](docs/getting-started.md) or give your coding agent:
+
+```text
+node_modules/metaproject/skills/project-bootstrap/SKILL.md
+```
+
+### Existing application with an OpenAPI contract
+
+Initialize Metaproject, then import a bundled OpenAPI 3.x YAML/JSON file or URL:
+
+```bash
+npx metaproject init
+npx metaproject import-openapi ./docs/openapi.yaml
+# or
+npx metaproject import-openapi https://example.test/openapi.json
+```
+
+For an existing multi-file local specification, you can keep it in place and configure:
+
+```yaml
+openapi: docs/api/openapi.yaml
+```
+
+See [Adopting an existing application](docs/adopting-existing-application.md) and `skills/openapi-import/SKILL.md`.
+
+### Existing application without a sufficient API spec
+
+Metaproject ships an agent workflow for static analysis of routes/controllers, validation, serializers, browser calls, templates, and relevant domain types:
+
+```text
+node_modules/metaproject/skills/application-analysis/SKILL.md
+```
+
+The skill models the browser-facing HTTP capabilities in OpenAPI first, then hands off to component creation. It does not attempt to model every source-code method.
+
+## Core component model
+
+A read component can be very small:
 
 ```html
+<title>Users</title>
+
 <data-source request="listUsers">
-  <data-table></data-table>
+  <data-table>
+    <button data-action="open">Open</button>
+  </data-table>
 </data-source>
 ```
 
-`<data-source>` resolves the OpenAPI `operationId`, binds flat attributes to OpenAPI parameters, runs the request through the project client, caches GETs, deduplicates in-flight requests, subscribes to invalidation, and provides the resolved resource as context.
+`request="listUsers"` refers to an OpenAPI `operationId`; the component does not encode a URL or HTTP method.
+
+`data-action="open"` emits a normal semantic CustomEvent. The host application decides what `open` means:
+
+```js
+document.querySelector('user-list').addEventListener('open', event => {
+  showUser(event.detail.resource);
+});
+```
+
+A mutation stays tied to the API contract:
+
+```html
+<data-source request="getUser" id=${id}>
+  <data-form>
+    <button data-operation="updateUser">Save</button>
+  </data-form>
+</data-source>
+```
+
+This separation is intentional:
+
+```text
+data-action      → application intent / host behavior
+data-operation   → OpenAPI operation
+data-source      → OpenAPI read + resource context
+```
+
+## `<data-source>`
+
+`<data-source>` is Core's data boundary. It:
+
+- resolves a GET/HEAD OpenAPI `operationId`;
+- maps flat HTML attributes/properties to OpenAPI path/query/header parameters;
+- executes through the configured client;
+- shares an in-memory GET/HEAD cache with all other sources in the same runtime;
+- deduplicates identical in-flight requests;
+- selects nested response data/schema with `select="..."`;
+- provides resource + schema context to `data-table`, `data-form`, `data-label`, and nested controls;
+- coordinates mutation parameters/request bodies through `data-operation`;
+- invalidates affected cached reads after successful mutations.
+
+Example:
 
 ```html
 <data-source
@@ -36,63 +158,64 @@ Components use declarative data primitives instead of calling an API facade dire
 </data-source>
 ```
 
-Use one `<data-source>` per query. For another query, add another data-source.
+All matching sources share the HTTP/cache entry while each source keeps its own resource context. See the full [Core data-source documentation](docs/data-source.md).
 
-`<data-table>` automatically renders arrays/objects. Row actions are authored directly as HTML and are cloned into an automatic Actions column with the current row as resource context:
+## Public Web Component contract
 
-```html
-<data-source request="listUsers">
-  <data-table @edit=${event => navigate('user-edit', { id:event.detail.resource.id })}>
-    <button data-action="edit">Edit</button>
-    <button data-operation="deleteUser">Delete</button>
-  </data-table>
-</data-source>
-```
-
-There is no `.actions` configuration array. Explicit table markup with a static `<template data-row>` remains available when custom cell placement is needed.
-
-`<data-form>` automatically renders an object using OpenAPI schema metadata when available and runtime value types otherwise. It generates fields only; mutation controls are authored explicitly:
+Declare inputs with `<component-property>`:
 
 ```html
-<data-source request="getUser" id=${id}>
-  <data-form>
-    <button data-operation="updateUser">Save</button>
-  </data-form>
-</data-source>
+<component-property
+  name="dbName"
+  type="string"
+  required
+  example="app"
+></component-property>
 ```
 
-`data-operation` resolves the referenced OpenAPI operation through the nearest `<data-source>`. Path/query/header parameters come from the source's flat attributes first and then from the current resource context. If the operation declares a request body, the current resource becomes that body. Inside `<data-form>`, that resource is the edited object. Successful mutations invalidate shared cached reads automatically.
-
-The same primitive works for other operations:
+Primitive camelCase properties compile to predictable kebab-case HTML attributes:
 
 ```html
-<button data-operation="deleteUser">Delete</button>
+<db-table-list db-name="app"></db-table-list>
 ```
 
-A source may override the project client explicitly:
+They can also be assigned as JavaScript properties:
 
-```html
-<data-source request="listInvoices" .client=${billingClient}>
-  <data-table></data-table>
-</data-source>
+```js
+component.dbName='app';
 ```
 
-Otherwise the compiled application uses the default REST client created from `api_root`.
+Use semantic DOM events for outputs. This makes generated elements portable across host applications.
 
-## Install / initialize
+See [Using generated components](docs/using-components.md).
+
+## OpenAPI tooling
+
+Metaproject keeps the API contract deterministic and useful for development previews:
 
 ```bash
-npm install --save-dev metaproject
-npx metaproject init
-```
-
-## OpenAPI examples
-
-Every operation with a response body should provide a representative success example so Canvas can render useful previews.
-
-```bash
+# validate representative response examples
 npx metaproject openapi check-examples
+
+# create/update modeled resources from JSON input
+npx metaproject openapi upsert-entity --input entity.json
+npx metaproject openapi upsert-operation --input operation.json
+
+# import an existing bundled YAML/JSON contract
+npx metaproject import-openapi SOURCE
 ```
+
+Every modeled operation should have a stable `operationId` and `x-project-id`; reusable schemas should have stable `x-project-id` values. Operations with response bodies should have small representative success examples.
+
+## Validate the complete project
+
+```bash
+npx metaproject check
+```
+
+`check` validates the shared project model without building assets: OpenAPI resources, examples, component parsing, operation references, duplicate IDs/tags, and related contract diagnostics.
+
+The same project/OpenAPI indexers are exported by Core and consumed by Canvas/tooling, so diagnostics do not depend on a separate editor implementation.
 
 ## Build
 
@@ -100,4 +223,42 @@ npx metaproject openapi check-examples
 npx metaproject build
 ```
 
-The build emits browser-native ESM under `public/components/`, including operation metadata, the default REST client runtime, compiled components, and a manifest.
+The build emits browser-native ESM under the configured output directory, including:
+
+```text
+index.js          # import once; registers generated custom elements
+runtime.js        # default REST runtime/configuration
+api.js            # operation metadata
+<component>.js    # generated Web Components
+manifest.json     # component metadata
+_chunks/...       # shared generated chunks when needed
+```
+
+Use the output directly from an application:
+
+```html
+<script type="module" src="/components/index.js"></script>
+<user-list></user-list>
+```
+
+Node.js/Metaproject is a development/build dependency; the host application does not need a Metaproject server at runtime.
+
+## Agent skills
+
+Core ships focused skills instead of one monolithic workflow:
+
+- `skills/project-bootstrap/SKILL.md` — design a new project/API from scratch;
+- `skills/application-analysis/SKILL.md` — analyze an existing codebase and write/update its browser API contract;
+- `skills/openapi-import/SKILL.md` — adopt an existing OpenAPI contract;
+- `skills/component-creator/SKILL.md` — generate the smallest useful reusable Web Components from modeled operations;
+- `skills/component-authoring/SKILL.md` — edit HTML-first components and Core primitives directly.
+
+`npx metaproject init` can add a bounded `AGENTS.md` section that routes coding agents to the right workflow.
+
+## Documentation
+
+- [Architecture](docs/architecture.md)
+- [Getting started from scratch](docs/getting-started.md)
+- [Adopting an existing application](docs/adopting-existing-application.md)
+- [Core data-source](docs/data-source.md)
+- [Using generated components](docs/using-components.md)
