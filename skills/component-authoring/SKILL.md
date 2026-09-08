@@ -19,6 +19,20 @@ Use these primitives:
 
 Do not call `api.<operationId>()`. Components do not receive an API facade.
 
+## Component title
+
+`<title>` is component metadata and is removed from the rendered component body. Canvas uses it as the node chrome title.
+
+It may reference declared component properties:
+
+```html
+<title>Rows — ${dbName}.${tableName}</title>
+<component-property name="dbName" type="string" required example="app"></component-property>
+<component-property name="tableName" type="string" required example="users"></component-property>
+```
+
+Canvas reevaluates the title when navigation changes those properties. Do not duplicate the same context with a rendered `<header>`/`<h1>` unless the heading is genuinely part of the component UX.
+
 ## Reads
 
 Use the OpenAPI `operationId` directly:
@@ -81,7 +95,7 @@ Put the mutation operation directly on the action element:
 </data-source>
 ```
 
-The nearest `<data-source>` supplies operation parameters from its flat attributes. Missing operation parameters may be taken from the current resource context, which makes row actions work naturally. If the OpenAPI operation declares a request body, the current resource becomes that body. Inside `<data-form>`, that is the edited object.
+The nearest `<data-source>` supplies operation parameters from its flat attributes. Missing operation parameters may be taken from the current resource context, which makes row actions work naturally. If the OpenAPI operation declares a request body, the current resource becomes that body. Inside `<data-form>`, that is the edited object. Top-level resource fields already declared as OpenAPI path/query/header parameters are omitted from the automatically derived request body.
 
 Successful mutations invalidate shared cached reads automatically.
 
