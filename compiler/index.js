@@ -79,7 +79,18 @@ export function compileComponentModule({tag,path='',source,css='',scriptImport=n
 
 export function designTimeProperties(definition){const result={};for(const property of definition.properties||[]){if(property.example!==undefined)result[property.name]=structuredCloneSafe(property.example);else if(property.default!==undefined)result[property.name]=structuredCloneSafe(property.default);}return result;}
 export function extractNamedExports(source=''){const names=[];let match;const patterns=[/\bexport\s+(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/g,/\bexport\s+class\s+([A-Za-z_$][\w$]*)/g,/\bexport\s+(?:const|let|var)\s+([A-Za-z_$][\w$]*)/g];for(const pattern of patterns)while((match=pattern.exec(source)))names.push(match[1]);return unique(names);}
-export function tagFromComponentPath(path){const parts=String(path).replace(/\\/g,'/').split('/').filter(Boolean);const componentIndex=parts.lastIndexOf('components');if(componentIndex>=0&&parts[componentIndex+1]){const tail=parts.slice(componentIndex+1);if(tail.at(-1)==='component.html')tail.pop();if(tail.length)return tail.at(-1).replace(/\.(?:js|ts|html)$/i,'');}const base=parts.at(-1)||'';return base.replace(/\.(?:js|ts|html)$/i,'');}
+export function tagFromComponentPath(path){
+  const parts=String(path).replace(/\\/g,'/').split('/').filter(Boolean);
+  const componentIndex=parts.lastIndexOf('components');
+  if(componentIndex>=0&&parts[componentIndex+1]){
+    const tail=parts.slice(componentIndex+1);
+    if(tail.at(-1)==='component.html')tail.pop();
+    if(tail.length)return tail.at(-1).replace(/\.(?:js|ts|html)$/i,'');
+  }
+  if(parts.at(-1)==='component.html'&&parts.length>1)return parts.at(-2).replace(/\.(?:js|ts|html)$/i,'');
+  const base=parts.at(-1)||'';
+  return base.replace(/\.(?:js|ts|html)$/i,'');
+}
 export function humanizeTag(tag){return String(tag).split('-').filter(Boolean).map(word=>word[0]?.toUpperCase()+word.slice(1)).join(' ');}
 export function validateComponentTag(tag){if(!tag||!/^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/.test(tag))throw new Error(`Component tag ${JSON.stringify(tag)} must be a valid custom-element name containing a hyphen.`);}
 
@@ -94,7 +105,14 @@ function dataOperationIds(source){
   }
   return unique(values);
 }
-function litPropertySource(prop){if(prop.attribute==='false'||!['string','boolean','number','integer'].includes(String(prop.type).toLowerCase()))return`{ attribute:false }`;const type=String(prop.type).toLowerCase();if(type==='boolean')return`{ type:Boolean }`;if(type==='number'||type==='integer')return`{ type:Number }`;return`{ type:String }`;}
+function litPropertySource(prop){
+  const type=String(prop.type).toLowerCase();
+  if(prop.attribute==='false'||!['string','boolean','number','integer'].includes(type))return`{ attribute:false }`;
+  const configured=typeof prop.attribute==='string'&&prop.attribute!==''&&prop.attribute!=='true'?prop.attribute:camelToKebab(prop.name);
+  const converter=type==='boolean'?'Boolean':type==='number'||type==='integer'?'Number':'String';
+  return`{ type:${converter}, attribute:${JSON.stringify(configured)} }`;
+}
+function camelToKebab(value){return String(value||'').replace(/([a-z0-9])([A-Z])/g,'$1-$2').replace(/_/g,'-').toLowerCase();}
 function classNameForTag(tag){return tag.split('-').map(x=>x[0].toUpperCase()+x.slice(1)).join('')+'Element';}
 function parseAttributes(source){const attrs={};const pattern=/([:@.A-Za-z_][\w:.-]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;let match;while((match=pattern.exec(source)))attrs[match[1]]=match[2]??match[3]??match[4]??true;return attrs;}
 function hasBoolean(attrs,key){return attrs[key]===true||attrs[key]===''||attrs[key]===key||attrs[key]==='true';}
