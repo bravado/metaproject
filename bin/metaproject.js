@@ -12,6 +12,13 @@ try {
     const options = parseInitArgs(argv);
     const result = initProject(options);
     printInitResult(result);
+  } else if (command === 'check') {
+    const { checkProject } = await import('../project/check.js');
+    const { root } = parseRootArgs(argv);
+    const result=checkProject({root});
+    console.log(`Metaproject check: ${result.errors.length} error(s), ${result.warnings.length} warning(s).`);
+    for(const diagnostic of result.diagnostics) console.log(`  ${diagnostic.severity === 'warning' ? 'WARN' : 'ERROR'} ${diagnostic.code}: ${diagnostic.message}`);
+    if(result.errors.length)process.exitCode=1;
   } else if (command === 'build') {
     const { buildProject } = await import('../build/index.js');
     const options = parseBuildArgs(argv);
@@ -27,9 +34,10 @@ try {
     console.log(`Built API metadata: ${result.outputPath}`);
   } else if (command === 'import-openapi') {
     const { importProjectOpenApi } = await import('../openapi/project-tools.js');
-    const { root, url, force } = parseImportArgs(argv);
-    const result = await importProjectOpenApi({ root, url, force });
+    const { root, source, force } = parseImportArgs(argv);
+    const result = await importProjectOpenApi({ root, source, force });
     console.log(`Imported OpenAPI spec into ${result.path}`);
+    console.log(`  Source:     ${result.source}`);
     console.log(`  Operations: ${result.operations}`);
     console.log(`  Entities:   ${result.entities}`);
   } else if (command === 'openapi') {
@@ -99,15 +107,15 @@ function parseBuildArgs(args) {
 }
 
 function parseImportArgs(args) {
-  let root='.'; let url; let force=false;
+  let root='.'; let source; let force=false;
   for (const arg of args) {
     if (arg === '--force') force=true;
     else if (arg.startsWith('-')) throw new Error(`Unknown import-openapi option: ${arg}`);
-    else if (!url) url=arg;
+    else if (!source) source=arg;
     else root=arg;
   }
-  if (!url) throw new Error('Usage: metaproject import-openapi URL [project-root] [--force]');
-  return { root, url, force };
+  if (!source) throw new Error('Usage: metaproject import-openapi SOURCE [project-root] [--force]');
+  return { root, source, force };
 }
 
 function parseOpenApiMutationArgs(args) {
@@ -144,10 +152,13 @@ function printInitResult(result) {
   else console.log('  Created: nothing (project was already initialized)');
   if (result.agents?.changed) console.log('  Agent instructions: AGENTS.md updated');
   console.log('\nNext:');
-  console.log('  Ask your coding agent to follow node_modules/metaproject/skills/application-analysis/SKILL.md');
-  console.log('  npx metaproject build');
+  console.log('  Existing API spec: npx metaproject import-openapi ./path/to/openapi.yaml');
+  console.log('  Existing code/no spec: follow node_modules/metaproject/skills/application-analysis/SKILL.md');
+  console.log('  New project: follow node_modules/metaproject/skills/project-bootstrap/SKILL.md');
+  console.log('  Validate: npx metaproject check');
+  console.log('  Build:    npx metaproject build');
 }
 
 function printHelp() {
-  console.log(`Metaproject\n\nUsage:\n  metaproject init [project-root] [--name NAME] [--no-agents]\n  metaproject build [project-root] [--minify] [--sourcemap]\n  metaproject build-api [project-root]\n  metaproject import-openapi URL [project-root] [--force]\n  metaproject openapi check-examples [project-root]\n  metaproject openapi upsert-operation --input FILE [project-root]\n  metaproject openapi upsert-entity --input FILE [project-root]\n  metaproject --version\n\nTypical existing-project setup:\n  npm install --save-dev metaproject\n  npx metaproject init\n  npx metaproject build\n`);
+  console.log(`Metaproject\n\nUsage:\n  metaproject init [project-root] [--name NAME] [--no-agents]\n  metaproject check [project-root]\n  metaproject build [project-root] [--minify] [--sourcemap]\n  metaproject build-api [project-root]\n  metaproject import-openapi SOURCE [project-root] [--force]\n  metaproject openapi check-examples [project-root]\n  metaproject openapi upsert-operation --input FILE [project-root]\n  metaproject openapi upsert-entity --input FILE [project-root]\n  metaproject --version\n\nSOURCE may be a local YAML/JSON file, file:// URL, or HTTP(S) URL.\n\nTypical setup:\n  npm install --save-dev metaproject\n  npx metaproject init\n  npx metaproject check\n  npx metaproject build\n`);
 }
