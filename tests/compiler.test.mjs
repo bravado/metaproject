@@ -18,16 +18,17 @@ test('HTML components infer metadata and declarative operation dependencies',()=
   assert.ok(definition.dependencies.includes('status-pill'));
 });
 
-test('save operation becomes semantic action metadata',()=>{
+test('data-operation becomes semantic operation metadata',()=>{
   const definition=parseComponentSource(editSource,{tag:'user-edit'});
   assert.ok(definition.relationships.some(x=>x.target==='getUser'));
   assert.ok(definition.relationships.some(x=>x.target==='updateUser'));
-  assert.deepEqual(definition.actionOperations,[{event:'save',operationId:'updateUser'}]);
+  assert.deepEqual(definition.actionOperations,[{event:'click',operationId:'updateUser'}]);
 });
 
-test('removed data-resource and direct api calls fail fast',()=>{
+test('removed data-resource, direct api calls, and save mapping fail fast',()=>{
   assert.throws(()=>parseComponentSource('<data-resource></data-resource>',{tag:'user-detail'}),/<data-resource> was removed/);
   assert.throws(()=>parseComponentSource('<data-table .resource=${api.listUsers()}></data-table>',{tag:'user-list'}),/direct api\.operationId\(\) calls were removed/);
+  assert.throws(()=>parseComponentSource('<data-source request="getUser" save="updateUser"></data-source>',{tag:'user-edit'}),/data-source save= was removed/);
 });
 
 test('native row templates remain static',()=>{
