@@ -15,6 +15,7 @@
     "./mock-api": "./mock-api/index.js",
     "./mock-api/client": "./mock-api/client.js",
     "./project": "./project/index.js",
+    "./project/check": "./project/check.js",
     "./openapi/mutator": "./openapi/mutator.js",
     "./init": "./init/index.js",
     "./openapi/project-tools": "./openapi/project-tools.js"
