@@ -50,15 +50,17 @@ export function ensureAgentsInstructions(root) {
   const block = `${AGENTS_MARKER_START}
 ## Metaproject
 
-For API-backed UI work, follow:
+Metaproject is the OpenAPI-to-Web-Components layer in this repository. Canonical source is \`metaproject.yaml\`, the configured OpenAPI document, and the configured component source directory. Never edit generated component output manually.
 
-\`node_modules/metaproject/skills/application-analysis/SKILL.md\`
+Choose the workflow that matches the task:
 
-For component-only changes, follow:
+- New project/API design: \`node_modules/metaproject/skills/project-bootstrap/SKILL.md\`
+- Existing codebase without a complete OpenAPI contract: \`node_modules/metaproject/skills/application-analysis/SKILL.md\`
+- Existing OpenAPI/Swagger contract to adopt: \`node_modules/metaproject/skills/openapi-import/SKILL.md\`
+- Generate components from an already-modeled API: \`node_modules/metaproject/skills/component-creator/SKILL.md\`
+- Edit component source directly: \`node_modules/metaproject/skills/component-authoring/SKILL.md\`
 
-\`node_modules/metaproject/skills/component-authoring/SKILL.md\`
-
-Canonical source is \`metaproject.yaml\`, \`openapi.yaml\`, and \`components/\`. Keep OpenAPI success examples small and representative. Never edit generated \`public/components/\` files manually.
+Keep OpenAPI success examples small and representative. Prefer semantic \`data-action\` events so generated Web Components remain reusable in any host application. Run \`npx metaproject check\` before \`npx metaproject build\`.
 ${AGENTS_MARKER_END}
 `;
 
