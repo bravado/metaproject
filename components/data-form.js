@@ -27,10 +27,10 @@ export class DataForm extends LitElement {
     const value=this._value;
     if(!value||typeof value!=='object'||Array.isArray(value))return html`<div class="empty">No object resource.</div>`;
     const keys=fieldNames(value,this._schema);
-    return html`<form class="form" @submit=${event=>this.#save(event)}>
+    return html`<div class="form" role="form">
       ${keys.map(name=>this.#field(name,value[name],this._schema?.properties?.[name]))}
-      <button type="submit">Save</button>
-    </form>`;
+      <button type="button" @click=${()=>this.#save()}>Save</button>
+    </div>`;
   }
   #setContext(resource,schema){this._schema=schema||null;this._value=cloneValue(resource);this.requestUpdate();}
   #field(name,value,schema){
@@ -44,7 +44,12 @@ export class DataForm extends LitElement {
   }
   #set(name,value){if(this._value&&typeof this._value==='object'){this._value[name]=value;this.requestUpdate();}}
   #setJson(name,text){try{this.#set(name,JSON.parse(text));}catch{/* keep last valid value */}}
-  #save(event){event.preventDefault();this.dispatchEvent(new CustomEvent('save',{detail:{resource:cloneValue(this._value)},bubbles:true,composed:true}));}
+  #save(){
+    for(const control of this.renderRoot.querySelectorAll('input,select,textarea')){
+      if(typeof control.reportValidity==='function'&&!control.reportValidity())return;
+    }
+    this.dispatchEvent(new CustomEvent('save',{detail:{resource:cloneValue(this._value)},bubbles:true,composed:true}));
+  }
 }
 
 export class DataLabel extends LitElement {
@@ -87,7 +92,7 @@ export class FormSelect extends FormBoundControl {
   constructor(){super();this._options=[];}
   connectedCallback(){super.connectedCallback();queueMicrotask(()=>this.#syncOptions());}
   #syncOptions(){this._options=[...this.querySelectorAll(':scope > option')].map(option=>({value:option.value,label:option.textContent||option.value,disabled:option.disabled}));this.requestUpdate();}
-  render(){return html`<label><span class="label">${this.fieldLabel()}</span><select .value=${String(this.currentValue()??'')} ?required=${this.required} ?disabled=${this.disabled} @change=${e=>this.updateValue(e.currentTarget.value,e)}>${this._options.map(option=>html`<option value=${option.value} ?disabled=${option.disabled}>${option.label}</option>`)}</select><slot hidden @slotchange=${()=>this.#syncOptions()}></slot></label>`;}
+  render(){return html`<label><span class="label">${this.fieldLabel()}</span><select .value=${String(this.currentValue()??'')} ?required=${this.required} ?disabled=${this.disabled} @change=${e=>this.updateValue(e.currentTarget.value,e)}>${this._options.map(option=>html`<option value=${option.value} ?disabled=${option.disabled}>${option.label}</option>`)} </select><slot hidden @slotchange=${()=>this.#syncOptions()}></slot></label>`;}
 }
 export class FormCheckbox extends FormBoundControl {
   render(){return html`<label><input type="checkbox" .checked=${Boolean(this.currentValue())} ?disabled=${this.disabled} @change=${e=>this.updateValue(e.currentTarget.checked,e)}><span><slot>${this.fieldLabel()}</slot></span></label>`;}
