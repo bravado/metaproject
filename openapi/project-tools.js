@@ -1,12 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { createDefaultOpenApiSource } from '../project/index.js';
 import { mutateOperationDocument, mutateEntityDocument } from './mutation-model.js';
 
 const require = createRequire(import.meta.url);
-
 const METHODS = ['get','put','post','delete','options','head','patch','trace'];
 
 /** Deterministically create or update one local OpenAPI operation. */
@@ -96,27 +96,54 @@ export function normalizeImportedOpenApi(document) {
   return document;
 }
 
-export async function importProjectOpenApi({ root = process.cwd(), url, force = false, fetchImpl = globalThis.fetch } = {}) {
-  if (!url) throw new Error('OpenAPI import requires a URL.');
-  if (typeof fetchImpl !== 'function') throw new Error('OpenAPI import requires fetch support.');
+/**
+ * Import an existing bundled OpenAPI 3.x document from either a local file or
+ * an HTTP(S) URL. The source is copied into the Metaproject-owned openapi.yaml
+ * and normalized with stable operation/entity IDs.
+ */
+export async function importProjectOpenApi({ root = process.cwd(), source, url, force = false, fetchImpl = globalThis.fetch } = {}) {
+  const requested=source ?? url;
+  if (!requested) throw new Error('OpenAPI import requires a file path or URL.');
   root = path.resolve(root);
   const file = path.join(root, 'openapi.yaml');
   if (fs.existsSync(file) && !force && !isEmptyLocalSpec(fs.readFileSync(file, 'utf8'))) {
     throw new Error('openapi.yaml already contains modeled API resources. Re-run with --force to replace it.');
   }
-  const response = await fetchImpl(url);
-  if (!response.ok) throw new Error(`Could not load OpenAPI spec (${response.status} ${response.statusText}) from ${url}`);
-  const text = await response.text();
-  let document;
-  try { document = JSON.parse(text); }
-  catch { document = yaml().parse(text); }
+
+  const loaded=await loadImportSource(requested,{fetchImpl});
+  let document=parseImportedDocument(loaded.text,loaded.label);
   rejectExternalRefs(document);
   normalizeImportedOpenApi(document);
-  document['x-metaproject-import-source'] = String(url);
+  document['x-metaproject-import-source'] = loaded.label;
   fs.writeFileSync(file, yaml().stringify(document));
-  return { path:'openapi.yaml', url:String(url), operations:countOperations(document), entities:Object.keys(document.components.schemas || {}).length };
+  return {
+    path:'openapi.yaml',
+    source:loaded.label,
+    url:loaded.kind==='url'?loaded.label:null,
+    operations:countOperations(document),
+    entities:Object.keys(document.components.schemas || {}).length
+  };
 }
 
+async function loadImportSource(source,{fetchImpl}) {
+  const value=String(source).trim();
+  if (/^https?:\/\//i.test(value)) {
+    if (typeof fetchImpl !== 'function') throw new Error('OpenAPI URL import requires fetch support.');
+    const response=await fetchImpl(value);
+    if (!response.ok) throw new Error(`Could not load OpenAPI spec (${response.status} ${response.statusText}) from ${value}`);
+    return {kind:'url',label:value,text:await response.text()};
+  }
+  const file=value.startsWith('file:')?fileURLToPath(value):path.resolve(value);
+  if (!fs.existsSync(file)) throw new Error(`OpenAPI file not found: ${value}`);
+  return {kind:'file',label:file,text:fs.readFileSync(file,'utf8')};
+}
+function parseImportedDocument(text,label) {
+  try { return JSON.parse(text); }
+  catch {
+    try { return yaml().parse(text); }
+    catch (error) { throw new Error(`Could not parse OpenAPI document from ${label}: ${error.message}`); }
+  }
+}
 function generatedOperationId(method, operationPath) {
   const words = String(operationPath).replace(/[{}]/g,'').split(/[^A-Za-z0-9]+/).filter(Boolean);
   const tail = words.map((word,index)=>index===0?word.toLowerCase():word[0].toUpperCase()+word.slice(1)).join('') || 'root';
@@ -127,10 +154,8 @@ function isEmptyLocalSpec(source){try{const doc=yaml().parse(source)||{};return 
 function rejectExternalRefs(value){
   if(Array.isArray(value)){for(const child of value)rejectExternalRefs(child);return;}
   if(!value||typeof value!=='object')return;
-  if(typeof value.$ref==='string'&&!value.$ref.startsWith('#'))throw new Error(`OpenAPI import currently requires a bundled specification; external $ref is not supported: ${value.$ref}`);
+  if(typeof value.$ref==='string'&&!value.$ref.startsWith('#'))throw new Error(`OpenAPI import currently requires a bundled specification; external $ref is not supported: ${value.$ref}. Point metaproject.yaml openapi at the existing multi-file spec instead, or bundle it before importing.`);
   for(const child of Object.values(value))rejectExternalRefs(child);
 }
-
 function has(object,key){return Object.prototype.hasOwnProperty.call(object||{},key);}
-
 function yaml(){try{return require('yaml');}catch(error){throw new Error(`Metaproject OpenAPI file tools require the yaml dependency. Reinstall metaproject with npm.\n${error.message}`);}}
