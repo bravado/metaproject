@@ -63,6 +63,7 @@ export class DataTable extends HTMLElement {
   get resolvedResource() { return this.#resource; }
   set columns(value) { this.#columns=Array.isArray(value)?value:[]; this.#schedule(); }
   get columns() { return this.#columns; }
+  set actions(_value) { throw new Error('<data-table>.actions was removed. Author data-action/data-operation HTML inside <data-table> instead.'); }
 
   #schedule() {
     if (this.#renderQueued) return;
@@ -163,14 +164,15 @@ function authoredActionTemplates(table){
 function hasActionIntent(element){return element.hasAttribute('data-action')||element.hasAttribute('data-operation')||Boolean(element.querySelector?.('[data-action],[data-operation]'));}
 function markActionTemplate(element){
   if (!element.hasAttribute(ACTION_TEMPLATE_ATTRIBUTE)) {
-    element.setAttribute(ACTION_TEMPLATE_ATTRIBUTE,'');
+    element.setAttribute(ACTION_TEMPLATE_ATTRIBUTE,element.hasAttribute('hidden')?'hidden':'visible');
     element.toggleAttribute('hidden',true);
   }
 }
 function cloneActionTemplate(source){
   const clone=source.cloneNode(true);
+  const authoredHidden=source.getAttribute(ACTION_TEMPLATE_ATTRIBUTE)==='hidden';
   clone.removeAttribute(ACTION_TEMPLATE_ATTRIBUTE);
-  clone.removeAttribute('hidden');
+  clone.toggleAttribute('hidden',authoredHidden);
   return clone;
 }
 function directAuthoredChildrenChanged(record,table){
