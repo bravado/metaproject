@@ -12,7 +12,8 @@ test('automatic data-table clones authored row-action HTML instead of action des
   assert.match(table,/data-operation/);
   assert.match(table,/cloneActionTemplate\(source\)/);
   assert.match(table,/data-metaproject-actions/);
-  assert.doesNotMatch(table,/set actions\(|get actions\(|normalizeActions\(|#actions/);
+  assert.match(table,/set actions\(_value\) \{ throw new Error\('[^']*\.actions was removed/);
+  assert.doesNotMatch(table,/get actions\(|normalizeActions\(|#actions/);
 });
 
 test('generated action controls inherit row resource context',()=>{
