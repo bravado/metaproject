@@ -40,15 +40,23 @@ Use one `<data-source>` per query. For another query, add another data-source.
 
 `<data-table>` automatically renders arrays/objects. Explicit table markup with a static `<template data-row>` is available when needed.
 
-`<data-form>` automatically renders an object using OpenAPI schema metadata when available and runtime value types otherwise:
+`<data-form>` automatically renders an object using OpenAPI schema metadata when available and runtime value types otherwise. It generates fields only; mutation controls are authored explicitly:
 
 ```html
-<data-source request="getUser" save="updateUser" id=${id}>
-  <data-form></data-form>
+<data-source request="getUser" id=${id}>
+  <data-form>
+    <button data-operation="updateUser">Save</button>
+  </data-form>
 </data-source>
 ```
 
-`data-form` emits `save`; the surrounding data-source sends the edited resource as the mutation body. Successful mutations invalidate shared cached reads.
+`data-operation` resolves the referenced OpenAPI operation through the nearest `<data-source>`. Path/query/header parameters come from the source's flat attributes first and then from the current resource context. If the operation declares a request body, the current resource becomes that body. Inside `<data-form>`, that resource is the edited object. Successful mutations invalidate shared cached reads automatically.
+
+The same primitive works for other operations:
+
+```html
+<button data-operation="deleteUser">Delete</button>
+```
 
 A source may override the project client explicitly:
 
