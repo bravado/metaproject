@@ -1,8 +1,8 @@
 /**
  * Resolve external OpenAPI $ref values while preserving local references.
  *
- * The resolver is intentionally filesystem-agnostic: Canvas can resolve refs
- * from its in-memory File System Access snapshot, while the static builder can
+ * The resolver is intentionally filesystem-agnostic: browser tooling can
+ * resolve refs from an in-memory filesystem while the static builder can
  * resolve the same spec directly from disk.
  */
 export function resolveOpenApiRefs(document, {
@@ -106,3 +106,4 @@ function structuredCloneSafe(value) {
 }
 
 export { validateOpenApiExamples, assertOpenApiExamples } from './examples.js';
+export { buildOpenApiIndex, collectOperationSchemas, collectRefs } from './indexer.js';
