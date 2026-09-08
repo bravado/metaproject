@@ -5,10 +5,10 @@ import {
   invalidateDataRuntime,
   selectDataSchema
 } from '../data-source/index.js';
-import { ResourceContextController } from './context.js';
+import { ResourceContextController, requestResourceContext } from './context.js';
 
 export class DataSourceElement extends HTMLElement {
-  static get observedAttributes() { return ['request','save','select']; }
+  static get observedAttributes() { return ['request','select']; }
   #resource;
   #schema;
   #client=null;
@@ -20,12 +20,12 @@ export class DataSourceElement extends HTMLElement {
   constructor() {
     super();
     this.#controller=new ResourceContextController(this,()=>this.#resource,()=>this.#schema);
-    this._onSave=event=>this.#saveEvent(event);
+    this._onOperation=event=>this.#operationEvent(event);
   }
   connectedCallback() {
     if (!this.style.display) this.style.display='contents';
     this.#controller.hostConnected();
-    this.addEventListener('save',this._onSave);
+    this.addEventListener('click',this._onOperation);
     this.#runtimeUnsubscribe=subscribeDataRuntime(event=>{
       if (event?.type === 'invalidate' && this.request) this.load();
     });
@@ -40,14 +40,12 @@ export class DataSourceElement extends HTMLElement {
     this.#observer=null;
     this.#runtimeUnsubscribe?.();
     this.#runtimeUnsubscribe=null;
-    this.removeEventListener('save',this._onSave);
+    this.removeEventListener('click',this._onOperation);
     this.#controller.hostDisconnected();
   }
   attributeChangedCallback() { if (this.isConnected) this.load(); }
   get request() { return this.getAttribute('request') || ''; }
   set request(value) { value == null ? this.removeAttribute('request') : this.setAttribute('request',String(value)); }
-  get save() { return this.getAttribute('save') || ''; }
-  set save(value) { value == null ? this.removeAttribute('save') : this.setAttribute('save',String(value)); }
   get select() { return this.getAttribute('select') || ''; }
   set select(value) { value == null ? this.removeAttribute('select') : this.setAttribute('select',String(value)); }
   get client() { return this.#client; }
@@ -82,12 +80,13 @@ export class DataSourceElement extends HTMLElement {
     return result;
   }
 
-  #parameters(operation) {
+  #parameters(operation,resource) {
     const values={};
     for (const parameter of operation.parameters || []) {
       const attribute=camelToKebab(parameter.name);
       if (this.hasAttribute(attribute)) values[parameter.name]=this.getAttribute(attribute);
       else if (this[parameter.name] !== undefined && this[parameter.name] !== '') values[parameter.name]=this[parameter.name];
+      else if (resource && typeof resource === 'object' && resource[parameter.name] !== undefined) values[parameter.name]=resource[parameter.name];
     }
     return values;
   }
@@ -107,21 +106,40 @@ export class DataSourceElement extends HTMLElement {
     return undefined;
   }
 
-  #saveEvent(event) {
-    const nearest=event.composedPath().find(node=>node instanceof DataSourceElement);
-    if (nearest !== this || !this.save) return;
+  #operationEvent(event) {
+    const path=event.composedPath();
+    const trigger=path.find(node=>node instanceof Element&&node.hasAttribute?.('data-operation'));
+    if (!trigger) return;
+    const nearest=path.find(node=>node instanceof DataSourceElement);
+    if (nearest !== this) return;
+    const operationId=trigger.getAttribute('data-operation')?.trim();
+    if (!operationId) return;
+    const operation=getDataOperation(operationId);
+    if (!operation) return this.#fail(new Error(`Unknown OpenAPI operation: ${operationId}`));
+
+    event.preventDefault();
     event.stopPropagation();
-    const operation=getDataOperation(this.save);
-    if (!operation) return this.#fail(new Error(`Unknown OpenAPI operation: ${this.save}`));
+
+    const form=path.find(node=>node?.localName==='data-form');
+    if (operation.requestBody && typeof form?.reportValidity==='function' && !form.reportValidity()) return;
+
+    let resource;
+    requestResourceContext(trigger,value=>{resource=value;});
+
     let result;
     try {
-      result=invokeDataRequest(this.save,this.#parameters(operation),{
+      result=invokeDataRequest(operationId,this.#parameters(operation,resource),{
         client:this.#client || undefined,
-        body:event.detail?.resource
+        body:operation.requestBody ? resource : undefined
       });
     } catch (error) { return this.#fail(error); }
+
     Promise.resolve(result).then(value=>{
-      this.dispatchEvent(new CustomEvent('saved',{detail:{resource:event.detail?.resource,value},bubbles:true,composed:true}));
+      trigger.dispatchEvent(new CustomEvent('operation-complete',{
+        detail:{operationId,resource,value},
+        bubbles:true,
+        composed:true
+      }));
     },error=>this.#fail(error));
   }
 }
