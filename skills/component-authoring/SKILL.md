@@ -12,7 +12,7 @@ Canonical source lives in `components/`. Generated `public/components/` files ar
 Use these primitives:
 
 - `<data-source>` executes one OpenAPI read request and provides its result as resource context.
-- `<data-table>` consumes the nearest resource and renders it as a table automatically. Add explicit table markup only when the default table is not enough.
+- `<data-table>` consumes the nearest resource and renders it as a table automatically. Direct authored `data-action`/`data-operation` children become row actions in an automatic Actions column.
 - `<data-form>` consumes the nearest object resource and generates editable fields from OpenAPI schema/runtime types.
 - `data-operation="operationId"` on an action element executes that OpenAPI operation through the nearest `<data-source>`.
 - `<data-label>` and `form-*` remain available for explicitly authored UIs.
@@ -111,7 +111,30 @@ Do not use `save=` on `<data-source>` and do not build event-to-operation maps.
 
 An array of objects generates columns from response schema/object keys. Arrays of primitives generate one Value column. An object generates Field/Value rows.
 
-For custom row markup, use a static native row template. Never put Lit expressions inside `<template data-row>`:
+Author row actions directly as HTML inside the automatic table. Each authored action is cloned once per generated row and sees that row as its resource context:
+
+```html
+<data-source request="listUsers">
+  <data-table
+    @open=${event => navigate('user-edit', { id:event.detail.resource.id })}
+  >
+    <button data-action="open">Open</button>
+    <button data-operation="deleteUser">Delete</button>
+  </data-table>
+</data-source>
+```
+
+This automatically adds an `Actions` column. Do not use `.actions`; table actions are authored HTML, just like `data-form` actions.
+
+Conditional actions may use normal Lit expressions because they are outside native row templates:
+
+```html
+<data-table @edit=${event => navigate('user-edit', { id:event.detail.resource.id })}>
+  ${writable ? html`<button data-action="edit">Edit</button>` : nothing}
+</data-table>
+```
+
+For full custom row placement, use a static native row template. Never put Lit expressions inside `<template data-row>`:
 
 ```html
 <data-source request="listUsers">
