@@ -10,6 +10,35 @@ import {
 
 const ROW_CONTEXTS = new WeakMap();
 const ACTION_TEMPLATE_ATTRIBUTE = 'data-metaproject-action-template';
+const TABLE_STYLE_ATTRIBUTE = 'data-metaproject-table-style';
+
+export const DATA_TABLE_CSS = `
+data-table > table {
+  width:100%;
+  max-width:100%;
+  border-collapse:collapse;
+  font-size:14px;
+}
+data-table > table th,
+data-table > table td {
+  padding:.38rem .45rem;
+  border-bottom:1px solid #e2e8f0;
+  text-align:left;
+  vertical-align:top;
+}
+data-table > table th {
+  font-size:.68rem;
+  font-weight:650;
+  text-transform:uppercase;
+  letter-spacing:.02em;
+  color:#64748b;
+  background:#f8fafc;
+  white-space:nowrap;
+}
+data-table > table [data-metaproject-actions] {
+  white-space:nowrap;
+}
+`;
 
 export class DataTable extends HTMLElement {
   #resourceInput;
@@ -31,6 +60,7 @@ export class DataTable extends HTMLElement {
   connectedCallback() {
     if (!this.style.display) this.style.display='block';
     if (!this.style.maxWidth) this.style.maxWidth='100%';
+    ensureDefaultTableStyle(this);
     this.addEventListener(RESOURCE_CONTEXT_REQUEST,this._onContext);
     this.addEventListener('click',this._onClick,true);
     this.addEventListener(RESOURCE_CHANGE_EVENT,this._onChange);
@@ -163,10 +193,17 @@ export class DataTable extends HTMLElement {
   }
 }
 
+function ensureDefaultTableStyle(table){
+  if(table.querySelector(`:scope > style[${TABLE_STYLE_ATTRIBUTE}]`))return;
+  const style=document.createElement('style');
+  style.setAttribute(TABLE_STYLE_ATTRIBUTE,'');
+  style.textContent=DATA_TABLE_CSS;
+  table.prepend(style);
+}
 function authoredActionTemplates(table){
   return [...table.children].filter(element=>{
     if (!(element instanceof Element)) return false;
-    if (element.matches('table,template[data-row]')) return false;
+    if (element.matches('table,template[data-row],style['+TABLE_STYLE_ATTRIBUTE+']')) return false;
     if (element.hasAttribute('data-metaproject-auto')) return false;
     return hasActionIntent(element);
   });
@@ -200,7 +237,7 @@ function cloneActionTemplate(source){
 function directAuthoredChildrenChanged(record,table){
   if (record.target!==table) return false;
   const changed=[...record.addedNodes,...record.removedNodes].filter(node=>node instanceof Element);
-  return changed.some(element=>!element.hasAttribute?.('data-metaproject-auto'));
+  return changed.some(element=>!element.hasAttribute?.('data-metaproject-auto')&&!element.hasAttribute?.(TABLE_STYLE_ATTRIBUTE));
 }
 
 function tableModel(resource,schema,configuredColumns){
