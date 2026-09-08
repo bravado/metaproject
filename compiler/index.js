@@ -83,7 +83,16 @@ export function humanizeTag(tag){return String(tag).split('-').filter(Boolean).m
 export function validateComponentTag(tag){if(!tag||!/^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/.test(tag))throw new Error(`Component tag ${JSON.stringify(tag)} must be a valid custom-element name containing a hyphen.`);}
 
 function dataSourceAttributes(source){const values=[];for(const match of String(source||'').matchAll(/<data-source\b([^>]*)>/gi))values.push(parseAttributes(match[1]||''));return values;}
-function dataOperationIds(source){return unique([...String(source||'').matchAll(/\bdata-operation\s*=\s*(['"])([^'"]+)\1/gi)].map(match=>match[2].trim()).filter(Boolean));}
+function dataOperationIds(source){
+  const values=[];
+  const pattern=/\bdata-operation\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s"'=<>`]+))/gi;
+  let match;
+  while((match=pattern.exec(String(source||'')))){
+    const value=(match[1]??match[2]??match[3]??'').trim();
+    if(value&&!value.includes('${'))values.push(value);
+  }
+  return unique(values);
+}
 function litPropertySource(prop){if(prop.attribute==='false'||!['string','boolean','number','integer'].includes(String(prop.type).toLowerCase()))return`{ attribute:false }`;const type=String(prop.type).toLowerCase();if(type==='boolean')return`{ type:Boolean }`;if(type==='number'||type==='integer')return`{ type:Number }`;return`{ type:String }`;}
 function classNameForTag(tag){return tag.split('-').map(x=>x[0].toUpperCase()+x.slice(1)).join('')+'Element';}
 function parseAttributes(source){const attrs={};const pattern=/([:@.A-Za-z_][\w:.-]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;let match;while((match=pattern.exec(source)))attrs[match[1]]=match[2]??match[3]??match[4]??true;return attrs;}
