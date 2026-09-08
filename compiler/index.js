@@ -23,6 +23,7 @@ export function parseComponentSource(source,{tag,path=''}={}){
   const body=removeRanges(source,removals).trim();
   if(/<data-resource\b/i.test(body))throw new Error(`${path||tag}: <data-resource> was removed. Use <data-source request="operationId"> to fetch/provide data.`);
   if(/\bapi\.[A-Za-z_$][\w$]*\s*\(/.test(body))throw new Error(`${path||tag}: direct api.operationId() calls were removed. Use <data-source request="operationId">.`);
+  if(/<data-source\b[^>]*\bsave\s*=/i.test(body))throw new Error(`${path||tag}: data-source save= was removed. Put data-operation="operationId" on the action element instead.`);
   assertStaticNativeTemplates(body,path||tag);
   const actions=unique([...body.matchAll(/\bdata-action\s*=\s*(['"])([^'"]+)\1/gi)].map(x=>x[2].trim()).filter(Boolean));
   const dependencies=unique([...body.matchAll(/<([a-z][\w.-]*-[\w.-]+)(?:\s|>|\/)/gi)].map(x=>x[1].toLowerCase()).filter(x=>x!==tag&&!BUILTIN_TAGS.has(x)));
@@ -37,19 +38,19 @@ export function assertStaticNativeTemplates(source,resource='component'){
 }
 
 export function analyzeActionOperations(source){
-  const bindings=[];
-  for(const attrs of dataSourceAttributes(source))if(typeof attrs.save==='string'&&attrs.save&&!attrs.save.includes('${'))bindings.push({event:'save',operationId:attrs.save});
-  return bindings;
+  return dataOperationIds(source).map(operationId=>({event:'click',operationId}));
 }
 
 export function analyzeComponentDependencies(source,sourceTag){
   const relationships=[];const diagnostics=[];
   for(const attrs of dataSourceAttributes(source)){
-    for(const name of ['request','save'])if(typeof attrs[name]==='string'&&attrs[name]&&!attrs[name].includes('${'))relationships.push({type:'calls',source:sourceTag,targetKind:'operationId',target:attrs[name],origin:'component-source'});
+    if(typeof attrs.request==='string'&&attrs.request&&!attrs.request.includes('${'))relationships.push({type:'calls',source:sourceTag,targetKind:'operationId',target:attrs.request,origin:'component-source'});
   }
+  for(const operationId of dataOperationIds(source))relationships.push({type:'calls',source:sourceTag,targetKind:'operationId',target:operationId,origin:'component-source'});
   let match;const navPattern=/\bnavigate\s*\(\s*(['"])([^'"\n]+)\1/g;
   while((match=navPattern.exec(source)))relationships.push({type:'navigates-to',source:sourceTag,targetKind:'componentTag',target:match[2],origin:'component-source'});
-  if(/<data-source\b[^>]*(?:request|save)\s*=\s*\$\{/i.test(source))diagnostics.push({severity:'warning',code:'dynamic-operation',resource:sourceTag,message:'Dynamic data-source request/save operation cannot be represented on the graph.'});
+  if(/<data-source\b[^>]*request\s*=\s*\$\{/i.test(source))diagnostics.push({severity:'warning',code:'dynamic-operation',resource:sourceTag,message:'Dynamic data-source request operation cannot be represented on the graph.'});
+  if(/\bdata-operation\s*=\s*\$\{/i.test(source))diagnostics.push({severity:'warning',code:'dynamic-operation',resource:sourceTag,message:'Dynamic data-operation cannot be represented on the graph.'});
   if(/\bnavigate\s*\(\s*(?!['"])/.test(source))diagnostics.push({severity:'warning',code:'dynamic-navigation',resource:sourceTag,message:'Dynamic navigate(...) target cannot be represented on the graph.'});
   return{relationships:dedupeRelationships(relationships),diagnostics};
 }
@@ -82,6 +83,7 @@ export function humanizeTag(tag){return String(tag).split('-').filter(Boolean).m
 export function validateComponentTag(tag){if(!tag||!/^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/.test(tag))throw new Error(`Component tag ${JSON.stringify(tag)} must be a valid custom-element name containing a hyphen.`);}
 
 function dataSourceAttributes(source){const values=[];for(const match of String(source||'').matchAll(/<data-source\b([^>]*)>/gi))values.push(parseAttributes(match[1]||''));return values;}
+function dataOperationIds(source){return unique([...String(source||'').matchAll(/\bdata-operation\s*=\s*(['"])([^'"]+)\1/gi)].map(match=>match[2].trim()).filter(Boolean));}
 function litPropertySource(prop){if(prop.attribute==='false'||!['string','boolean','number','integer'].includes(String(prop.type).toLowerCase()))return`{ attribute:false }`;const type=String(prop.type).toLowerCase();if(type==='boolean')return`{ type:Boolean }`;if(type==='number'||type==='integer')return`{ type:Number }`;return`{ type:String }`;}
 function classNameForTag(tag){return tag.split('-').map(x=>x[0].toUpperCase()+x.slice(1)).join('')+'Element';}
 function parseAttributes(source){const attrs={};const pattern=/([:@.A-Za-z_][\w:.-]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;let match;while((match=pattern.exec(source)))attrs[match[1]]=match[2]??match[3]??match[4]??true;return attrs;}
