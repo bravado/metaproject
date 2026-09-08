@@ -27,5 +27,5 @@
   "peerDependencies": {"vite": ">=6"},
   "peerDependenciesMeta": {"vite": {"optional": true}},
   "bin": {"metaproject": "./bin/metaproject.js"},
-  "files": ["operations/","bin/","build/","compiler/","components/","data-source/","init/","mock-api/","openapi/","project/","skills/","vite/","README.md"]
+  "files": ["operations/","bin/","build/","compiler/","components/","data-source/","docs/","init/","mock-api/","openapi/","project/","skills/","vite/","README.md"]
 }
