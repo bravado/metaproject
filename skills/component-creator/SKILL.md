@@ -1,6 +1,6 @@
 ---
 name: metaproject-component-creator
-description: Create the smallest useful Metaproject UI from OpenAPI operations using data-source, data-table, data-form, and data-operation.
+description: Create the smallest useful Metaproject UI from OpenAPI operations using data-source, data-table, data-form, semantic data-action events, and data-operation.
 ---
 
 # Create Components from OpenAPI
@@ -18,16 +18,18 @@ A typical collection component is just:
 </data-source>
 ```
 
-A collection with a row action remains HTML-first:
+A collection with a row action remains reusable and HTML-first:
 
 ```html
 <title>Users</title>
 <data-source request="listUsers">
-  <data-table @edit=${event => navigate('user-edit', { id:event.detail.resource.id })}>
+  <data-table>
     <button data-action="edit">Edit</button>
   </data-table>
 </data-source>
 ```
+
+The component emits the semantic `edit` event. A standalone app handles it with `@edit=${...}` / `addEventListener('edit', ...)`; Canvas composition belongs in `metaproject.yaml` `on:` bindings.
 
 A parameterized component can expose its active context through the Canvas title:
 
@@ -53,8 +55,9 @@ Rules:
 - never generate `save=` on `<data-source>` or event-to-operation maps;
 - let data-table and data-form render automatically unless the UX genuinely needs explicit markup;
 - put automatic table row actions directly inside `<data-table>` as `data-action` / `data-operation` HTML; never generate `.actions` arrays;
-- use semantic `data-action` events only for UI/navigation actions that are not API operations;
-- use `navigate()` for component-to-component selection flows;
+- use semantic `data-action` events for UI/application intent that is not itself an API operation;
+- keep Canvas/application composition out of reusable component source; prefer `metaproject.yaml` `on:` bindings instead of `navigate()`;
+- direct action children on a component are row-action overrides for its first automatic data-table;
 - keep required component property examples small so standalone previews and initial Canvas titles are useful;
 - never generate cache keys, refresh tokens, custom invalidation events, or Promise composition loaders.
 
