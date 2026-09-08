@@ -1,9 +1,6 @@
 import { collectMockOperations, resolveMockResponse, validateMockInvocation } from './index.js';
 
-/**
- * Stateless OpenAPI-example transport used underneath DataSource in Canvas.
- * DataSource owns cache/invalidation; this client only resolves one invocation.
- */
+/** Stateless OpenAPI-example transport used by the shared Metaproject data runtime. */
 export function createMockClient(openapi, options = {}) {
   const operations = new Map(collectMockOperations(openapi || {}).map(operation => [operation.operationId, operation]));
   const configuredResponses = options.responses || {};
@@ -17,16 +14,13 @@ export function createMockClient(openapi, options = {}) {
           ? Boolean(options.allowMissingRequired(mockOperation, args))
           : Boolean(options.allowMissingRequired)
       });
-      const selection = {
-        ...(configuredResponses[mockOperation.operationId] || {}),
-        ...(args.response || {})
-      };
+      const selection = { ...(configuredResponses[mockOperation.operationId] || {}), ...(args.response || {}) };
       return resolveMockResponse(openapi, mockOperation, selection, args);
     },
-    get() { throw new Error('MockClient generic get() requires an OpenAPI operation. Use DataSource.api.<operationId>().'); },
-    post() { throw new Error('MockClient generic post() requires an OpenAPI operation. Use DataSource.api.<operationId>().'); },
-    put() { throw new Error('MockClient generic put() requires an OpenAPI operation. Use DataSource.api.<operationId>().'); },
-    patch() { throw new Error('MockClient generic patch() requires an OpenAPI operation. Use DataSource.api.<operationId>().'); },
-    delete() { throw new Error('MockClient generic delete() requires an OpenAPI operation. Use DataSource.api.<operationId>().'); }
+    get() { throw new Error('MockClient generic get() requires an OpenAPI operation. Use <data-source request="operationId">.'); },
+    post() { throw new Error('MockClient generic post() requires an OpenAPI operation. Use <data-source save="operationId">.'); },
+    put() { throw new Error('MockClient generic put() requires an OpenAPI operation. Use <data-source save="operationId">.'); },
+    patch() { throw new Error('MockClient generic patch() requires an OpenAPI operation. Use <data-source save="operationId">.'); },
+    delete() { throw new Error('MockClient generic delete() requires an OpenAPI operation.'); }
   });
 }

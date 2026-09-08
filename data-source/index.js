@@ -1,7 +1,3 @@
-export const DATA_SOURCE_CONTEXT_REQUEST = 'metaproject-data-source-context-request';
-
-let defaultDataSource = null;
-
 export class RestClientError extends Error {
   constructor(message, { method, url, status, response, body } = {}) {
     super(message);
@@ -22,9 +18,8 @@ export function createRestClient(options = {}) {
 
   const request = async (method, path, requestOptions = {}) => {
     if (typeof fetchImpl !== 'function') throw new Error('No fetch implementation is available for the Metaproject REST client.');
-    const query = requestOptions.query || {};
     const headers = { ...defaultHeaders, ...(requestOptions.headers || {}) };
-    const url = appendQuery(joinApiUrl(baseUrl, path), query);
+    const url = appendQuery(joinApiUrl(baseUrl, path), requestOptions.query || {});
     const init = {
       ...(requestOptions.request || {}),
       method,
@@ -70,261 +65,220 @@ export function createRestClient(options = {}) {
   return Object.freeze(client);
 }
 
-export class DataSourceStore {
-  constructor({ client, url, operations = [], fetch, headers, credentials } = {}) {
-    this.client = client || createRestClient({ baseUrl:url || '', fetch, headers, credentials });
-    this.operations = [];
-    this.operationById = new Map();
-    this.cache = new Map();
-    this.subscribers = new Set();
-    this.epoch = 0;
-    this.setOperations(operations, { notify:false });
-    this.api = this.#buildApi();
+const runtime = {
+  operations:new Map(),
+  client:null,
+  cache:new Map(),
+  subscribers:new Set(),
+  epoch:0
+};
+const clientIds = new WeakMap();
+let nextClientId = 1;
+
+export function configureDataRuntime({ operations, client } = {}) {
+  if (operations !== undefined) {
+    const list = Array.isArray(operations) ? operations : Object.values(operations || {});
+    runtime.operations = new Map(list.filter(Boolean).map(operation => [operation.operationId, operation]));
+    invalidateDataRuntime({ clear:true, reason:'operations' });
+  }
+  if (client !== undefined) {
+    runtime.client = client || null;
+    invalidateDataRuntime({ clear:true, reason:'client' });
+  }
+  return getDataRuntime();
+}
+
+export function getDataRuntime() {
+  return Object.freeze({
+    client:runtime.client,
+    operations:Object.freeze(Object.fromEntries(runtime.operations)),
+    invoke:invokeDataRequest,
+    subscribe:subscribeDataRuntime,
+    invalidate:invalidateDataRuntime
+  });
+}
+
+export function getDataOperation(operationId) {
+  return runtime.operations.get(String(operationId || '')) || null;
+}
+
+export function subscribeDataRuntime(callback) {
+  if (typeof callback !== 'function') return () => {};
+  runtime.subscribers.add(callback);
+  return () => runtime.subscribers.delete(callback);
+}
+
+export function invalidateDataRuntime({ clear = false, reason = 'mutation' } = {}) {
+  runtime.epoch += 1;
+  if (clear) runtime.cache.clear();
+  else for (const entry of runtime.cache.values()) entry.stale = true;
+  notify({ type:'invalidate', reason, clear, epoch:runtime.epoch });
+}
+
+export function invokeDataRequest(operationId, values = {}, options = {}) {
+  const operation = getDataOperation(operationId);
+  if (!operation) throw new Error(`Unknown OpenAPI operation: ${operationId}`);
+  const client = options.client || runtime.client;
+  if (!client) throw new Error(`No client is configured for ${operation.operationId}.`);
+  const args = operationArgs(operation, values, options);
+  const method = String(operation.method || 'GET').toUpperCase();
+  const invoke = () => invokeClient(client, operation, args);
+
+  if (method !== 'GET' && method !== 'HEAD') return mutate(invoke, operation, args);
+
+  const key = `${clientKey(client)}:${operation.operationId}:${stableStringify({ path:args.path, query:args.query, headers:args.headers })}`;
+  const existing = runtime.cache.get(key);
+  if (existing && !existing.stale) {
+    if (existing.status === 'success') return existing.value;
+    if (existing.status === 'pending') return existing.promise;
+    if (existing.status === 'error') return Promise.reject(existing.error);
   }
 
-  setOperations(operations = [], { notify = true } = {}) {
-    this.operations = Array.isArray(operations) ? [...operations] : Object.values(operations || {});
-    this.operationById = new Map(this.operations.filter(Boolean).map(operation => [operation.operationId, operation]));
-    this.api = this.#buildApi();
-    if (notify) this.clear();
-    return this;
+  const requestEpoch = runtime.epoch;
+  const entry = { key, operation, args, status:'pending', stale:false, value:undefined, error:null, promise:null };
+  runtime.cache.set(key, entry);
+  let result;
+  try { result = invoke(); }
+  catch (error) {
+    entry.status = 'error';
+    entry.error = error;
+    notify({ type:'query-error', entry, error });
+    throw error;
   }
 
-  setClient(client, { clear = true } = {}) {
-    if (!client) throw new Error('DataSource.setClient requires a client.');
-    if (client === this.client) return this;
-    this.client = client;
-    if (clear) this.clear();
-    else this.#notify({ type:'client', source:this });
-    return this;
+  if (!isPromiseLike(result)) {
+    entry.status = 'success';
+    entry.value = result;
+    entry.stale = requestEpoch !== runtime.epoch;
+    queueMicrotask(() => notify({ type:'query', entry }));
+    return result;
   }
 
-  subscribe(callback) {
-    if (typeof callback !== 'function') return () => {};
-    this.subscribers.add(callback);
-    return () => this.subscribers.delete(callback);
-  }
-
-  clear() {
-    this.epoch += 1;
-    this.cache.clear();
-    this.#notify({ type:'clear', source:this });
-    return this;
-  }
-
-  invalidate(predicate = null) {
-    this.epoch += 1;
-    let count = 0;
-    for (const [key, entry] of this.cache) {
-      if (predicate && !matchesInvalidation(predicate, entry, key)) continue;
-      entry.stale = true;
-      count += 1;
-    }
-    this.#notify({ type:'invalidate', source:this, count });
-    return count;
-  }
-
-  refresh(predicate = null) {
-    return this.invalidate(predicate);
-  }
-
-  get(path, options = {}) { return this.#query(`GET:${stableStringify({path,query:options.query,headers:options.headers})}`, { method:'GET', path, args:options }, () => this.client.get(path, options)); }
-  post(path, options = {}) { return this.#mutate(() => this.client.post(path, options)); }
-  put(path, options = {}) { return this.#mutate(() => this.client.put(path, options)); }
-  patch(path, options = {}) { return this.#mutate(() => this.client.patch(path, options)); }
-  delete(path, options = {}) { return this.#mutate(() => this.client.delete(path, options)); }
-
-  invoke(operationId, args = {}) {
-    const operation = typeof operationId === 'string' ? this.operationById.get(operationId) : operationId;
-    if (!operation) throw new Error(`Unknown OpenAPI operation: ${typeof operationId === 'string' ? operationId : operationId?.operationId}`);
-    const method = String(operation.method || 'GET').toUpperCase();
-    const invoke = () => {
-      if (typeof this.client?.invoke === 'function') return this.client.invoke(operation, args);
-      const path = expandPath(operation.path, args.path || {}, operation.operationId);
-      const clientMethod = this.client?.[method.toLowerCase()];
-      if (typeof clientMethod !== 'function') throw new Error(`DataSource client does not implement ${method.toLowerCase()}().`);
-      return clientMethod.call(this.client, path, {
-        query:args.query, headers:args.headers, body:args.body, signal:args.signal,
-        request:args.request, contentTypes:operation.requestBody?.contentTypes || []
-      });
-    };
-    if (method === 'GET' || method === 'HEAD') {
-      const key = `OP:${operation.operationId}:${stableStringify({path:args.path,query:args.query,headers:args.headers,response:args.response})}`;
-      return this.#query(key, { operation, args }, invoke);
-    }
-    return this.#mutate(invoke, { operation, args });
-  }
-
-  #buildApi() {
-    const api = {
-      get:(path, options = {}) => this.get(path, options),
-      post:(path, options = {}) => this.post(path, options),
-      put:(path, options = {}) => this.put(path, options),
-      patch:(path, options = {}) => this.patch(path, options),
-      delete:(path, options = {}) => this.delete(path, options)
-    };
-    for (const operation of this.operations || []) {
-      if (!operation?.operationId) continue;
-      api[operation.operationId] = (args = {}) => this.invoke(operation, args);
-    }
-    return Object.freeze(api);
-  }
-
-  #query(key, meta, load) {
-    const existing = this.cache.get(key);
-    if (existing && !existing.stale) {
-      if (existing.status === 'success') return existing.value;
-      if (existing.status === 'pending') return existing.promise;
-      if (existing.status === 'error') return Promise.reject(existing.error);
-    }
-
-    const requestEpoch = this.epoch;
-    const entry = { key, ...meta, status:'pending', stale:false, value:undefined, error:null, promise:null };
-    this.cache.set(key, entry);
-    let result;
-    try { result = load(); }
-    catch (error) {
+  entry.promise = Promise.resolve(result).then(
+    value => {
+      entry.status = 'success';
+      entry.value = value;
+      entry.error = null;
+      entry.stale = requestEpoch !== runtime.epoch;
+      notify({ type:'query', entry });
+      return value;
+    },
+    error => {
       entry.status = 'error';
       entry.error = error;
-      this.#notify({ type:'query-error', source:this, entry, error });
+      entry.stale = requestEpoch !== runtime.epoch;
+      notify({ type:'query-error', entry, error });
       throw error;
     }
+  );
+  return entry.promise;
+}
 
-    if (!isPromiseLike(result)) {
-      entry.status = 'success';
-      entry.value = result;
-      entry.stale = requestEpoch !== this.epoch;
-      queueMicrotask(() => this.#notify({ type:'query', source:this, entry }));
-      return result;
-    }
-
-    entry.promise = Promise.resolve(result).then(
-      value => {
-        entry.status = 'success';
-        entry.value = value;
-        entry.error = null;
-        entry.stale = requestEpoch !== this.epoch;
-        this.#notify({ type:'query', source:this, entry });
-        return value;
-      },
-      error => {
-        entry.status = 'error';
-        entry.error = error;
-        entry.stale = requestEpoch !== this.epoch;
-        this.#notify({ type:'query-error', source:this, entry, error });
-        throw error;
-      }
-    );
-    return entry.promise;
+export function selectDataSchema(schema, path = '') {
+  let current = schema || null;
+  for (const part of String(path || '').split('.').filter(Boolean)) {
+    if (!current) return null;
+    if (current.type === 'array') current = current.items || null;
+    current = current?.properties?.[part] || null;
   }
+  return current;
+}
 
-  #mutate(invoke, meta = {}) {
-    let result;
-    try { result = invoke(); }
-    catch (error) {
-      this.#notify({ type:'mutation-error', source:this, ...meta, error });
+function operationArgs(operation, values, options) {
+  const path = {}, query = {}, headers = {};
+  for (const parameter of operation.parameters || []) {
+    const raw = values?.[parameter.name];
+    if (raw === undefined || raw === null || raw === '') {
+      if (parameter.required) throw new Error(`${operation.operationId}: missing required ${parameter.in} parameter ${parameter.name}.`);
+      continue;
+    }
+    const value = coerceParameter(raw, parameter.schema);
+    if (parameter.in === 'path') path[parameter.name] = value;
+    else if (parameter.in === 'query') query[parameter.name] = value;
+    else if (parameter.in === 'header') headers[parameter.name] = value;
+  }
+  return {
+    path,
+    query,
+    headers:{ ...headers, ...(options.headers || {}) },
+    body:options.body,
+    signal:options.signal,
+    request:options.request,
+    response:options.response
+  };
+}
+
+function invokeClient(client, operation, args) {
+  if (typeof client.invoke === 'function') return client.invoke(operation, args);
+  const method = String(operation.method || 'GET').toLowerCase();
+  const invoke = client[method];
+  if (typeof invoke !== 'function') throw new Error(`Client does not implement ${method}().`);
+  const path = expandPath(operation.path, args.path || {}, operation.operationId);
+  return invoke.call(client, path, {
+    query:args.query,
+    headers:args.headers,
+    body:args.body,
+    signal:args.signal,
+    request:args.request,
+    contentTypes:operation.requestBody?.contentTypes || []
+  });
+}
+
+function mutate(invoke, operation, args) {
+  let result;
+  try { result = invoke(); }
+  catch (error) {
+    notify({ type:'mutation-error', operation, args, error });
+    throw error;
+  }
+  if (!isPromiseLike(result)) {
+    invalidateDataRuntime({ reason:operation.operationId });
+    notify({ type:'mutation', operation, args, value:result });
+    return result;
+  }
+  return Promise.resolve(result).then(
+    value => {
+      invalidateDataRuntime({ reason:operation.operationId });
+      notify({ type:'mutation', operation, args, value });
+      return value;
+    },
+    error => {
+      notify({ type:'mutation-error', operation, args, error });
       throw error;
     }
-    if (!isPromiseLike(result)) {
-      this.invalidate();
-      this.#notify({ type:'mutation', source:this, ...meta, value:result });
-      return result;
-    }
-    return Promise.resolve(result).then(
-      value => {
-        this.invalidate();
-        this.#notify({ type:'mutation', source:this, ...meta, value });
-        return value;
-      },
-      error => {
-        this.#notify({ type:'mutation-error', source:this, ...meta, error });
-        throw error;
-      }
-    );
-  }
+  );
+}
 
-  #notify(event) {
-    for (const callback of [...this.subscribers]) {
-      try { callback(event); }
-      catch (error) { console.error('Metaproject DataSource subscriber failed', error); }
-    }
+function notify(event) {
+  for (const callback of [...runtime.subscribers]) {
+    try { callback(event); }
+    catch (error) { console.error('Metaproject data runtime subscriber failed', error); }
   }
 }
 
-export function createDataSource(options = {}) {
-  return options instanceof DataSourceStore ? options : new DataSourceStore(options);
+function clientKey(client) {
+  if ((typeof client !== 'object' || client === null) && typeof client !== 'function') return String(client);
+  if (!clientIds.has(client)) clientIds.set(client, nextClientId++);
+  return clientIds.get(client);
 }
 
-export function setDefaultDataSource(source) {
-  defaultDataSource = source || null;
-  return defaultDataSource;
-}
-
-export function getDefaultDataSource() {
-  return defaultDataSource;
-}
-
-export function requestDataSourceContext(host, callback, { subscribe = false } = {}) {
-  if (!host?.dispatchEvent || typeof CustomEvent === 'undefined') {
-    callback?.(defaultDataSource);
-    return () => {};
+function coerceParameter(value, schema) {
+  const type = schema?.type;
+  if (type === 'integer') {
+    const number = Number.parseInt(value, 10);
+    return Number.isNaN(number) ? value : number;
   }
-  const detail = { callback, subscribe, unsubscribe:null };
-  host.dispatchEvent(new CustomEvent(DATA_SOURCE_CONTEXT_REQUEST, { detail, bubbles:true, composed:true }));
-  if (!detail.resolved && defaultDataSource && typeof callback === 'function') callback(defaultDataSource);
-  return typeof detail.unsubscribe === 'function' ? detail.unsubscribe : () => {};
-}
-
-export class DataSourceConsumerController {
-  constructor(host) {
-    this.host = host;
-    this.contextSource = null;
-    this.explicitSource = null;
-    this.fallbackSource = null;
-    this.boundSource = null;
-    this.contextUnsubscribe = null;
-    this.sourceUnsubscribe = null;
-    host.addController?.(this);
+  if (type === 'number') {
+    const number = Number(value);
+    return Number.isNaN(number) ? value : number;
   }
-
-  hostConnected() {
-    queueMicrotask(() => {
-      if (!this.host?.isConnected) return;
-      this.contextUnsubscribe?.();
-      this.contextUnsubscribe = requestDataSourceContext(this.host, source => {
-        this.contextSource = source || null;
-        this.#rebind();
-        this.host.requestUpdate?.();
-      }, { subscribe:true });
-      this.#rebind();
-    });
+  if (type === 'boolean') {
+    if (value === true || value === false) return value;
+    if (String(value).toLowerCase() === 'true') return true;
+    if (String(value).toLowerCase() === 'false') return false;
   }
-
-  hostDisconnected() {
-    this.contextUnsubscribe?.();
-    this.contextUnsubscribe = null;
-    this.sourceUnsubscribe?.();
-    this.sourceUnsubscribe = null;
-    this.boundSource = null;
-  }
-
-  resolve(explicitSource, fallbackSource = null) {
-    this.explicitSource = explicitSource || null;
-    this.fallbackSource = fallbackSource || null;
-    this.#rebind();
-    return this.boundSource;
-  }
-
-  #rebind() {
-    const next = this.explicitSource || this.contextSource || this.fallbackSource || defaultDataSource || null;
-    if (next === this.boundSource) return;
-    this.sourceUnsubscribe?.();
-    this.sourceUnsubscribe = null;
-    this.boundSource = next;
-    if (typeof next?.subscribe === 'function') {
-      this.sourceUnsubscribe = next.subscribe(() => this.host.requestUpdate?.());
-    }
-  }
+  if (type === 'array' && typeof value === 'string') return value.split(',').map(item => item.trim()).filter(Boolean);
+  return value;
 }
 
 export function joinApiUrl(apiRoot, operationPath) {
@@ -338,8 +292,9 @@ function appendQuery(url, query) {
   const params = new URLSearchParams();
   for (const [name, raw] of Object.entries(query || {})) {
     if (raw === undefined || raw === null) continue;
-    if (Array.isArray(raw)) for (const value of raw) if (value !== undefined && value !== null) params.append(name, String(value));
-    else params.append(name, String(raw));
+    if (Array.isArray(raw)) {
+      for (const value of raw) if (value !== undefined && value !== null) params.append(name, String(value));
+    } else params.append(name, String(raw));
   }
   const suffix = params.toString();
   return suffix ? url + (url.includes('?') ? '&' : '?') + suffix : url;
@@ -404,16 +359,12 @@ function setHeader(headers, name, value) {
   const existing = Object.keys(headers).find(key => key.toLowerCase() === target);
   headers[existing || name] = value;
 }
-function isPromiseLike(value) { return Boolean(value && typeof value.then === 'function'); }
-function matchesInvalidation(predicate, entry, key) {
-  if (typeof predicate === 'function') return Boolean(predicate(entry, key));
-  if (typeof predicate === 'string') return key.includes(predicate) || entry.operation?.operationId === predicate;
-  if (Array.isArray(predicate)) return predicate.some(value => matchesInvalidation(value, entry, key));
-  return true;
-}
 function stableStringify(value) {
   if (value === undefined) return 'undefined';
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
-  if (Array.isArray(value)) return '[' + value.map(stableStringify).join(',') + ']';
-  return '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + stableStringify(value[key])).join(',') + '}';
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
+}
+function isPromiseLike(value) {
+  return value != null && (typeof value === 'object' || typeof value === 'function') && typeof value.then === 'function';
 }

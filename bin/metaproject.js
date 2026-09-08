@@ -18,13 +18,13 @@ try {
     const result = await buildProject(options);
     console.log(`Metaproject build complete.`);
     console.log(`  Components: ${result.components.count}`);
-    console.log(`  Operations: ${result.apiClient.operations.length}`);
+    console.log(`  Operations: ${result.api.operations.length}`);
     console.log(`  Output:     ${result.outputDir}`);
   } else if (command === 'build-api') {
-    const { buildProjectApiClient } = await import('../build/index.js');
+    const { buildProjectApiModule } = await import('../build/index.js');
     const options = parseRootArgs(argv);
-    const result = buildProjectApiClient(options);
-    console.log(`Built API client: ${result.outputPath}`);
+    const result = buildProjectApiModule(options);
+    console.log(`Built API metadata: ${result.outputPath}`);
   } else if (command === 'import-openapi') {
     const { importProjectOpenApi } = await import('../openapi/project-tools.js');
     const { root, url, force } = parseImportArgs(argv);

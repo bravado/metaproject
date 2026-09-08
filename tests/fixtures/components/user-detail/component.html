@@ -1,15 +1,7 @@
 <title>User Details</title>
-
 <component-property name="id" type="integer" required example="1"></component-property>
-
-<data-resource
-  .resource=${api.getUser({ path: { id } })}
-  @edit=${event => navigate('user-edit', { id: event.detail.resource.id })}
->
-  <p>Name: <data-label field="name"></data-label></p>
-  <p>Email: <data-label field="email"></data-label></p>
-  <p>Role: <data-label field="role"></data-label></p>
-  <p>Status: <status-pill></status-pill></p>
-
-  <button data-action="edit">Edit user</button>
-</data-resource>
+<data-source request="getUser" id=${id} @edit=${event => navigate('user-edit', { id: event.detail.resource.id })}>
+  <data-label field="name"></data-label>
+  <status-pill></status-pill>
+  <button data-action="edit">Edit</button>
+</data-source>

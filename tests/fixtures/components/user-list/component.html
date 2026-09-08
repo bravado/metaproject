@@ -1,28 +1,6 @@
 <title>User List</title>
-
-
-<data-table
-  .resource=${api.listUsers()}
-  @open=${event => navigate('user-detail', { id: event.detail.resource.id })}
->
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Email</th>
-        <th>Status</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      <template data-row>
-        <tr>
-          <td><data-label field="name"></data-label></td>
-          <td><data-label field="email"></data-label></td>
-          <td><data-label field="active"></data-label></td>
-          <td><button data-action="open">Open</button></td>
-        </tr>
-      </template>
-    </tbody>
-  </table>
-</data-table>
+<data-source request="listUsers">
+  <data-table @open=${event => navigate('user-detail', { id: event.detail.resource.id })}>
+    <table><tbody><template data-row><tr><td><data-label field="name"></data-label></td><td><button data-action="open">Open</button></td></tr></template></tbody></table>
+  </data-table>
+</data-source>
