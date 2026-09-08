@@ -38,7 +38,7 @@ For existing applications, inspect only relevant routes, controllers, request va
 
 Reusable schemas under `components.schemas` must have stable `x-project-id` values.
 
-Components must call `api.<operationId>()`; do not duplicate URLs or HTTP methods in component code.
+Components reference Operations declaratively with `<data-source request="operationId">` for reads and `data-operation="operationId"` for action-triggered operations. Do not duplicate URLs or HTTP methods in component code.
 
 ## Examples
 
