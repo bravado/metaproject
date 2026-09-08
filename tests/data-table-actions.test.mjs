@@ -17,6 +17,16 @@ test('automatic data-table clones authored row-action HTML instead of action des
   assert.doesNotMatch(table,/get actions\(|normalizeActions\(|#actions/);
 });
 
+test('data-table owns a scoped default presentation for generated and authored tables',()=>{
+  assert.match(table,/export const DATA_TABLE_CSS/);
+  assert.match(table,/data-table > table \{/);
+  assert.match(table,/data-table > table th,/);
+  assert.match(table,/text-transform:uppercase/);
+  assert.match(table,/border-bottom:1px solid #e2e8f0/);
+  assert.match(table,/ensureDefaultTableStyle\(this\)/);
+  assert.match(table,/data-metaproject-table-style/);
+});
+
 test('direct action children on a component override its first automatic table actions',()=>{
   assert.match(table,/componentActionOverrides\(this\)/);
   assert.match(table,/root\?\.querySelector\?\.\('data-table'\)!==table/);
