@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { initProject, detectProjectName, AGENTS_MARKER_START } from '../init/index.js';
 
-test('init creates a complete Metaproject foundation in a Composer-only project', () => {
+test('init creates a complete host-neutral Metaproject foundation in a Composer-only project', () => {
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'metaproject-init-'));
   try {
     fs.writeFileSync(path.join(root,'composer.json'),JSON.stringify({name:'objectiveweb/db'}));
@@ -15,19 +15,21 @@ test('init creates a complete Metaproject foundation in a Composer-only project'
     assert.match(config,/name: DB/);
     assert.match(config,/source: components/);
     assert.match(config,/output: public\/components/);
-    assert.match(config,/^canvas:/m);
-    assert.match(config,/- id: overview/);
-    assert.match(config,/name: Overview/);
+    assert.doesNotMatch(config,/^canvas:/m);
     assert.match(fs.readFileSync(path.join(root,'openapi.yaml'),'utf8'),/openapi: 3\.1\.0/);
     assert.match(fs.readFileSync(path.join(root,'openapi.yaml'),'utf8'),/title: DB API/);
     assert.ok(fs.statSync(path.join(root,'components')).isDirectory());
     assert.equal(fs.existsSync(path.join(root,'views')),false);
     const agents=fs.readFileSync(path.join(root,'AGENTS.md'),'utf8');
     assert.match(agents,new RegExp(AGENTS_MARKER_START.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+    assert.match(agents,/skills\/project-bootstrap\/SKILL\.md/);
     assert.match(agents,/skills\/application-analysis\/SKILL\.md/);
+    assert.match(agents,/skills\/openapi-import\/SKILL\.md/);
+    assert.match(agents,/skills\/component-creator\/SKILL\.md/);
     assert.match(agents,/skills\/component-authoring\/SKILL\.md/);
-    assert.match(agents,/success examples small and representative/i);
-    assert.doesNotMatch(agents,/canvas/i);
+    assert.match(agents,/OpenAPI-to-Web-Components/i);
+    assert.match(agents,/semantic `data-action` events/i);
+    assert.match(agents,/metaproject check/);
   } finally { fs.rmSync(root,{recursive:true,force:true}); }
 });
 
@@ -74,8 +76,9 @@ test('init refreshes an older bounded Metaproject AGENTS block without duplicati
     const agents=fs.readFileSync(path.join(root,'AGENTS.md'),'utf8');
     assert.equal((agents.match(/<!-- metaproject:start -->/g)||[]).length,1);
     assert.doesNotMatch(agents,/old instructions mentioning views/);
+    assert.match(agents,/project-bootstrap\/SKILL\.md/);
     assert.match(agents,/application-analysis\/SKILL\.md/);
+    assert.match(agents,/openapi-import\/SKILL\.md/);
     assert.match(agents,/component-authoring\/SKILL\.md/);
-    assert.doesNotMatch(agents,/canvas/i);
   } finally { fs.rmSync(root,{recursive:true,force:true}); }
 });
