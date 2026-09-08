@@ -123,6 +123,7 @@ export class DataTable extends HTMLElement {
     return {resource:this.#resource,schema:this.#schema};
   }
   #provideContext(event) {
+    if (event.target === this) return;
     const detail=event.detail;
     if (typeof detail?.callback !== 'function') return;
     event.stopPropagation();
