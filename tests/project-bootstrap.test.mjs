@@ -13,7 +13,7 @@ class MemoryFilesystem {
   async readFile(path) { return this.files.get(path); }
 }
 
-test('empty project is bootstrapped with both canonical root files', async () => {
+test('empty project is bootstrapped with the Core-owned API/component root files', async () => {
   const fs = new MemoryFilesystem();
   assert.deepEqual(await ensureProjectFiles(fs), ['metaproject.yaml', 'openapi.yaml']);
   assert.equal(await fs.readFile('metaproject.yaml'), DEFAULT_METAPROJECT_SOURCE);
@@ -21,8 +21,11 @@ test('empty project is bootstrapped with both canonical root files', async () =>
   assert.match(DEFAULT_METAPROJECT_SOURCE, /^name: Metaproject$/m);
   assert.match(DEFAULT_METAPROJECT_SOURCE, /^version: 1$/m);
   assert.match(DEFAULT_METAPROJECT_SOURCE, /^api_root: \/api$/m);
-  assert.match(DEFAULT_METAPROJECT_SOURCE, /^canvas:$/m);
-  assert.match(DEFAULT_METAPROJECT_SOURCE, /- id: overview/);
+  assert.match(DEFAULT_METAPROJECT_SOURCE, /^openapi: openapi\.yaml$/m);
+  assert.match(DEFAULT_METAPROJECT_SOURCE, /^components:$/m);
+  assert.match(DEFAULT_METAPROJECT_SOURCE, /^  source: components$/m);
+  assert.match(DEFAULT_METAPROJECT_SOURCE, /^  output: public\/components$/m);
+  assert.doesNotMatch(DEFAULT_METAPROJECT_SOURCE, /^canvas:/m);
   assert.match(DEFAULT_OPENAPI_SOURCE, /^openapi: 3\.1\.0$/m);
   assert.match(DEFAULT_OPENAPI_SOURCE, /^paths: \{\}$/m);
   assert.match(DEFAULT_OPENAPI_SOURCE, /^  schemas: \{\}$/m);
