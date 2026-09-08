@@ -18,14 +18,15 @@ test('static build owns operation metadata, default client, runtime, components 
   assert.match(source,/assertOpenApiExamples\(project\.resolvedOpenApi\)/);
 });
 
-test('authoring skills teach the lean primitives',async()=>{
+test('authoring skills teach the lean portable primitives',async()=>{
   const authoring=await readFile('skills/component-authoring/SKILL.md','utf8');
   const creator=await readFile('skills/component-creator/SKILL.md','utf8');
   assert.match(authoring,/<data-source>/);
   assert.match(authoring,/<data-table>/);
   assert.match(authoring,/<data-form>/);
-  assert.match(authoring,/request="operationId"/);
+  assert.match(authoring,/OpenAPI `operationId`/);
   assert.doesNotMatch(authoring,/api\.<operationId>/);
   assert.doesNotMatch(authoring,/data-resource/);
-  assert.match(creator,/multiple data-sources/i);
+  assert.match(creator,/multiple `<data-source>`/i);
+  assert.match(creator,/reusable Web Components/i);
 });
