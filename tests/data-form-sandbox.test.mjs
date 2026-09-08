@@ -4,10 +4,10 @@ import { readFile } from 'node:fs/promises';
 
 const form=await readFile('components/data-form.js','utf8');
 
-test('auto data-form saves as an application action without native form submission',()=>{
+test('auto data-form never relies on native form submission',()=>{
   assert.match(form,/role="form"/);
-  assert.match(form,/button type="button"/);
+  assert.match(form,/<slot><\/slot>/);
   assert.match(form,/reportValidity\(\)/);
   assert.doesNotMatch(form,/<form class="form"/);
-  assert.match(form,/new CustomEvent\('save'/);
+  assert.doesNotMatch(form,/type="submit"|new CustomEvent\('save'/);
 });
