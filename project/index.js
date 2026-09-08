@@ -1,5 +1,5 @@
 export function createDefaultMetaprojectSource({ name = 'Metaproject' } = {}) {
-  return `version: 1\nname: ${yamlScalar(name)}\napi_root: /api\nopenapi: openapi.yaml\ncomponents:\n  source: components\n  output: public/components\ncanvas:\n  - id: overview\n    name: Overview\n    items: []\n`;
+  return `version: 1\nname: ${yamlScalar(name)}\napi_root: /api\nopenapi: openapi.yaml\ncomponents:\n  source: components\n  output: public/components\n`;
 }
 
 export function createDefaultOpenApiSource({ title = 'Metaproject API' } = {}) {
@@ -37,6 +37,8 @@ export async function ensureProjectFiles(filesystem, { name = 'Metaproject', api
   return created;
 }
 
+// Canvas metadata is optional extension data in metaproject.yaml. These helpers
+// remain here so Canvas can consume it without making Canvas a Core dependency.
 export function projectCanvases(project) {
   return Array.isArray(project?.canvas) ? project.canvas : [];
 }
@@ -50,3 +52,5 @@ function yamlScalar(value) {
   if (/^[A-Za-z0-9 _.-]+$/.test(string) && string.trim() === string && string !== '') return string;
   return JSON.stringify(string);
 }
+
+export { buildProjectIndex, relatedRelationships, componentTag } from './indexer.js';
