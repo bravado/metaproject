@@ -10,8 +10,16 @@ test('runtime and project tooling subpaths point at canonical Core implementatio
   assert.equal(pkg.exports['./operations'],'./operations/index.js');
   assert.equal(pkg.exports['./openapi'],'./openapi/index.js');
   assert.equal(pkg.exports['./project'],'./project/index.js');
+  assert.equal(pkg.exports['./project/check'],'./project/check.js');
   assert.ok(pkg.files.includes('docs/'));
   assert.ok(pkg.files.includes('skills/'));
+});
+
+test('browser-safe project entry point does not import Node filesystem tooling',async()=>{
+  const source=await readFile('project/index.js','utf8');
+  assert.doesNotMatch(source,/node:fs|\.\/check\.js/);
+  const check=await readFile('project/check.js','utf8');
+  assert.match(check,/node:fs/);
 });
 
 test('core does not depend on Canvas/editor packages',async()=>{
