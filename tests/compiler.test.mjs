@@ -25,10 +25,11 @@ test('data-operation becomes semantic operation metadata',()=>{
   assert.deepEqual(definition.actionOperations,[{event:'click',operationId:'updateUser'}]);
 });
 
-test('removed data-resource, direct api calls, and save mapping fail fast',()=>{
+test('removed data-resource, direct api calls, save mapping, and actions arrays fail fast',()=>{
   assert.throws(()=>parseComponentSource('<data-resource></data-resource>',{tag:'user-detail'}),/<data-resource> was removed/);
   assert.throws(()=>parseComponentSource('<data-table .resource=${api.listUsers()}></data-table>',{tag:'user-list'}),/direct api\.operationId\(\) calls were removed/);
   assert.throws(()=>parseComponentSource('<data-source request="getUser" save="updateUser"></data-source>',{tag:'user-edit'}),/data-source save= was removed/);
+  assert.throws(()=>parseComponentSource('<data-table .actions=${[{name:\'open\'}]}></data-table>',{tag:'user-list'}),/data-table \.actions was removed/);
 });
 
 test('native row templates remain static',()=>{
