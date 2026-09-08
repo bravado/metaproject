@@ -29,57 +29,56 @@ Typical mapping:
 
 Prefer a few obvious components over a large abstraction hierarchy. Extract reusable components only for stable concepts that are genuinely reused.
 
+## DataSource rule
+
+API-backed components inherit their DataSource automatically. Resolution is:
+
+1. explicit component `.dataSource`;
+2. nearest contextual `<data-source>` provider;
+3. project default DataSource generated from `openapi.yaml` + `api_root`.
+
+Therefore **do not generate a `<data-source>` wrapper around a component's normal API reads**.
+
+Use `<data-source>` only when the component intentionally creates or overrides a DataSource for a subtree, such as a secondary backend or an isolated subquery scope.
+
+Use `api.<operationId>()` directly in the component:
+
+```html
+<data-table
+  .resource=${Promise.resolve(api.listUsers()).then(page => page?.data || page || [])}
+></data-table>
+```
+
+The shared DataSource owns GET caching, in-flight deduplication, subscriptions, and mutation invalidation. Do not generate cache keys, refresh tokens, custom invalidation events, or duplicate request stores.
+
+Use `<data-resource>` only when a fetched/supplied object must become resource context for nested `data-label` or `form-*` fields:
+
+```html
+<data-resource .resource=${api.getUser({ path: { id } })}
+  @save=${event => api.updateUser({
+    path: { id },
+    body: event.detail.resource
+  })}
+>
+  <form-input field="name" label="Name"></form-input>
+  <button type="button" data-action="save" data-validate>Save</button>
+</data-resource>
+```
+
 ## Make every top-level component showcase-ready
 
 Each generated top-level component should render meaningfully by itself with minimal data:
 
-- API-backed reads use `api.<operationId>()`, whose response comes from the explicit OpenAPI example in development.
-- required component properties use `<component-property ... example="...">` so the component can render without external setup.
-- lists show a few important columns, not every schema field.
-- detail/edit components show only useful user-facing fields.
-- create forms may start empty; edit forms should use the item GET example.
-- avoid requiring hidden global state merely to display the component.
+- API-backed reads use `api.<operationId>()`, whose response comes from explicit OpenAPI examples in Canvas Mock mode;
+- required component properties use `<component-property ... example="...">`;
+- lists show a few important columns, not every schema field;
+- detail/edit components show only useful user-facing fields;
+- create forms may start empty; edit forms should use the item GET example;
+- avoid hidden global application state.
 
 Do not copy response mock objects into component source. OpenAPI owns API examples.
 
 ## Build straightforward interactions
-
-Use the actual `operationId`:
-
-```html
-<data-source .resource=${api.getUser({ path: { id } })}>
-  <data-label field="name"></data-label>
-</data-source>
-```
-
-For actions:
-
-```html
-<data-source
-  .resource=${api.getUser({ path: { id } })}
-  @save=${event => api.updateUser({
-    path: { id: event.detail.resource.id },
-    body: event.detail.resource
-  })}>
-  <form-input field="name" label="Name" required></form-input>
-  <button type="button" data-action="save" data-validate>Save</button>
-</data-source>
-```
-
-For reads that must refresh after mutations, use a keyed loader function and invalidate affected keys only after the mutation succeeds:
-
-```html
-<data-source
-  .key=${`users`}
-  .resource=${() => api.listUsers()}
-  @delete=${event => api.deleteUser({ path:{ id:event.detail.resource.id } })
-    .then(() => event.currentTarget.invalidate('users'))}
->
-  ...
-</data-source>
-```
-
-If an item mutation affects both a detail and collection source, invalidate both stable keys. Do not manually patch sibling components or duplicate the list request in mutation handlers.
 
 For collection tables, keep `<template data-row>` completely static. Never generate Lit expressions, property bindings, or event bindings inside the native template. Put handlers on `<data-table>` and use row context inside the template:
 
@@ -101,7 +100,7 @@ For collection tables, keep `<template data-row>` completely static. Never gener
 </data-table>
 ```
 
-If fields are runtime-defined (for example a generic database browser), use `data-table` auto mode rather than generating expressions inside a native template:
+If fields are runtime-defined, use `data-table` auto mode:
 
 ```html
 <data-table
@@ -112,7 +111,9 @@ If fields are runtime-defined (for example a generic database browser), use `dat
 ></data-table>
 ```
 
-Use `navigate('<component-tag>', properties)` for simple component-to-component flows such as list → detail/edit.
+Use `navigate('<component-tag>', properties)` for simple component-to-component flows. One semantic action may update more than one independent panel by calling `navigate()` for each target when those panels represent the same selection.
+
+Successful POST/PUT/PATCH/DELETE operations invalidate cached reads through the shared DataSource automatically. Let subscribed sibling components refresh themselves; do not manually patch them.
 
 ## Form mapping
 
@@ -136,4 +137,4 @@ npx metaproject openapi check-examples
 npx metaproject build
 ```
 
-Verify that every `api.<operationId>()` exists, every top-level component has enough example-backed data to render usefully, every `<template data-row>` is static, keyed reloadable sources use loader functions, composed tags exist, and generated `public/components/` files were not edited manually.
+Verify that every `api.<operationId>()` exists, every top-level component has enough example-backed data to render usefully, components do not add unnecessary `<data-source>` wrappers, every `<template data-row>` is static, and generated `public/components/` files were not edited manually.
