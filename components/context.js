@@ -68,44 +68,6 @@ export class ResourceContextController {
   }
 }
 
-/**
- * HTML-first components expose their first automatic data-table row-action area
- * to direct light-DOM action children. Consumers attach behavior to the
- * component's semantic CustomEvents; the projected children are declarative
- * action templates only.
- */
-export class ComponentActionProjectionController {
-  constructor(host) {
-    this.host=host;
-    this.observer=null;
-    this.queued=false;
-    host.addController?.(this);
-  }
-  hostConnected() {
-    if (typeof MutationObserver !== 'undefined') {
-      this.observer=new MutationObserver(()=>this.#queue());
-      this.observer.observe(this.host,{childList:true});
-    }
-    this.#queue();
-  }
-  hostUpdated() { this.#queue(); }
-  hostDisconnected() {
-    this.observer?.disconnect();
-    this.observer=null;
-  }
-  #queue() {
-    if (this.queued) return;
-    this.queued=true;
-    queueMicrotask(()=>{this.queued=false;this.#apply();});
-  }
-  #apply() {
-    const table=this.host.renderRoot?.querySelector?.('data-table');
-    if (!table) return;
-    const overrides=[...this.host.children].filter(element=>hasActionIntent(element));
-    table.actionOverrides=overrides.length?overrides:null;
-  }
-}
-
 export function readDataField(resource,path){
   if(!path)return resource;
   return String(path).split('.').reduce((value,key)=>value?.[key],resource);
@@ -142,14 +104,6 @@ function actionElementForEvent(event,provider){
     if(node instanceof Element&&node.hasAttribute?.('data-action'))return node;
   }
   return null;
-}
-
-function hasActionIntent(element){
-  return element instanceof Element && (
-    element.hasAttribute('data-action') ||
-    element.hasAttribute('data-operation') ||
-    Boolean(element.querySelector?.('[data-action],[data-operation]'))
-  );
 }
 
 function validateFormControls(form){
