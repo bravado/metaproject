@@ -38,7 +38,18 @@ Components use declarative data primitives instead of calling an API facade dire
 
 Use one `<data-source>` per query. For another query, add another data-source.
 
-`<data-table>` automatically renders arrays/objects. Explicit table markup with a static `<template data-row>` is available when needed.
+`<data-table>` automatically renders arrays/objects. Row actions are authored directly as HTML and are cloned into an automatic Actions column with the current row as resource context:
+
+```html
+<data-source request="listUsers">
+  <data-table @edit=${event => navigate('user-edit', { id:event.detail.resource.id })}>
+    <button data-action="edit">Edit</button>
+    <button data-operation="deleteUser">Delete</button>
+  </data-table>
+</data-source>
+```
+
+There is no `.actions` configuration array. Explicit table markup with a static `<template data-row>` remains available when custom cell placement is needed.
 
 `<data-form>` automatically renders an object using OpenAPI schema metadata when available and runtime value types otherwise. It generates fields only; mutation controls are authored explicitly:
 
