@@ -9,6 +9,7 @@ import {
 } from './context.js';
 
 const ROW_CONTEXTS = new WeakMap();
+const ACTION_TEMPLATE_ATTRIBUTE = 'data-metaproject-action-template';
 
 export class DataTable extends HTMLElement {
   #resourceInput;
@@ -18,7 +19,7 @@ export class DataTable extends HTMLElement {
   #subscriptions=new Set();
   #renderQueued=false;
   #columns=[];
-  #actions=[];
+  #observer=null;
 
   constructor() {
     super();
@@ -32,6 +33,10 @@ export class DataTable extends HTMLElement {
     this.addEventListener(RESOURCE_CONTEXT_REQUEST,this._onContext);
     this.addEventListener('click',this._onClick,true);
     this.addEventListener(RESOURCE_CHANGE_EVENT,this._onChange);
+    this.#observer=new MutationObserver(records=>{
+      if (records.some(record=>directAuthoredChildrenChanged(record,this))) this.#schedule();
+    });
+    this.#observer.observe(this,{childList:true});
     queueMicrotask(()=>{
       if (this.#resourceInput === undefined) {
         this.#contextUnsubscribe=requestResourceContext(this,(resource,schema)=>{
@@ -44,6 +49,8 @@ export class DataTable extends HTMLElement {
     });
   }
   disconnectedCallback() {
+    this.#observer?.disconnect();
+    this.#observer=null;
     this.#contextUnsubscribe?.();
     this.#contextUnsubscribe=null;
     this.removeEventListener(RESOURCE_CONTEXT_REQUEST,this._onContext);
@@ -56,8 +63,6 @@ export class DataTable extends HTMLElement {
   get resolvedResource() { return this.#resource; }
   set columns(value) { this.#columns=Array.isArray(value)?value:[]; this.#schedule(); }
   get columns() { return this.#columns; }
-  set actions(value) { this.#actions=Array.isArray(value)?value:[]; this.#schedule(); }
-  get actions() { return this.#actions; }
 
   #schedule() {
     if (this.#renderQueued) return;
@@ -87,13 +92,15 @@ export class DataTable extends HTMLElement {
     }
   }
   #renderAuto() {
+    const actionTemplates=authoredActionTemplates(this);
+    for (const source of actionTemplates) markActionTemplate(source);
+
     let table=this.querySelector(':scope > table[data-metaproject-auto]');
     if (!table) { table=document.createElement('table');table.setAttribute('data-metaproject-auto','');this.append(table); }
     const model=tableModel(this.#resource,this.#schema,this.#columns);
-    const actions=normalizeActions(this.#actions);
     const thead=document.createElement('thead'), head=document.createElement('tr');
     for (const column of model.columns) { const th=document.createElement('th');th.textContent=column.label;head.append(th); }
-    if (actions.length) { const th=document.createElement('th');th.textContent='Actions';head.append(th); }
+    if (actionTemplates.length) { const th=document.createElement('th');th.textContent='Actions';head.append(th); }
     thead.append(head);
     const tbody=document.createElement('tbody');
     for (const row of model.rows) {
@@ -101,14 +108,10 @@ export class DataTable extends HTMLElement {
       tr.setAttribute('data-metaproject-row','');
       ROW_CONTEXTS.set(tr,{resource:row.resource,schema:row.schema});
       for (const column of model.columns) { const td=document.createElement('td');td.textContent=formatValue(column.read(row));tr.append(td); }
-      if (actions.length) {
+      if (actionTemplates.length) {
         const td=document.createElement('td');
-        for (const action of actions) {
-          const button=document.createElement('button');
-          button.type='button';button.setAttribute('data-action',action.name);button.textContent=action.label;
-          if(action.title)button.title=action.title;
-          td.append(button);
-        }
+        td.setAttribute('data-metaproject-actions','');
+        for (const source of actionTemplates) td.append(cloneActionTemplate(source));
         tr.append(td);
       }
       tbody.append(tr);
@@ -149,6 +152,33 @@ export class DataTable extends HTMLElement {
   }
 }
 
+function authoredActionTemplates(table){
+  return [...table.children].filter(element=>{
+    if (!(element instanceof Element)) return false;
+    if (element.matches('table,template[data-row]')) return false;
+    if (element.hasAttribute('data-metaproject-auto')) return false;
+    return hasActionIntent(element);
+  });
+}
+function hasActionIntent(element){return element.hasAttribute('data-action')||element.hasAttribute('data-operation')||Boolean(element.querySelector?.('[data-action],[data-operation]'));}
+function markActionTemplate(element){
+  if (!element.hasAttribute(ACTION_TEMPLATE_ATTRIBUTE)) {
+    element.setAttribute(ACTION_TEMPLATE_ATTRIBUTE,'');
+    element.toggleAttribute('hidden',true);
+  }
+}
+function cloneActionTemplate(source){
+  const clone=source.cloneNode(true);
+  clone.removeAttribute(ACTION_TEMPLATE_ATTRIBUTE);
+  clone.removeAttribute('hidden');
+  return clone;
+}
+function directAuthoredChildrenChanged(record,table){
+  if (record.target!==table) return false;
+  const changed=[...record.addedNodes,...record.removedNodes].filter(node=>node instanceof Element);
+  return changed.some(element=>!element.hasAttribute?.('data-metaproject-auto'));
+}
+
 function tableModel(resource,schema,configuredColumns){
   if(Array.isArray(resource)){
     const itemSchema=schema?.type==='array'?schema.items:null;
@@ -173,12 +203,6 @@ function columnModel(configured,schema,row){
     const field=typeof column==='string'?column:String(column?.field??column?.name??'');
     return{field,label:typeof column==='string'?humanizeField(field):String(column?.label??humanizeField(field)),read:item=>readDataField(item.resource,field)};
   }).filter(column=>column.field);
-}
-function normalizeActions(actions){
-  return actions.map(action=>typeof action==='string'
-    ?{name:action,label:humanizeField(action),title:''}
-    :{name:String(action?.name??''),label:String(action?.label??humanizeField(action?.name??'')),title:String(action?.title??'')}
-  ).filter(action=>action.name);
 }
 function actionElementForEvent(event,provider){for(const node of event.composedPath()){if(node===provider)break;if(node instanceof Element&&node.hasAttribute?.('data-action'))return node;}return null;}
 function formatValue(value){if(value==null)return'';if(typeof value==='object'){try{return JSON.stringify(value);}catch{return String(value);}}return String(value);}
