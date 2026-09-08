@@ -1,6 +1,7 @@
 import { LitElement, html, nothing, css } from 'lit';
 import {
   RESOURCE_CHANGE_EVENT,
+  ResourceContextController,
   requestResourceContext,
   readDataField,
   writeDataField,
@@ -12,9 +13,16 @@ export class DataForm extends LitElement {
   static styles=css`
     :host{display:block;font:inherit;color:inherit}.form{display:grid;gap:12px}.field{display:grid;gap:5px}.label{font-size:12px;font-weight:650;color:#475569}
     input,select,textarea{width:100%;box-sizing:border-box;font:inherit;border:1px solid #cbd5e1;border-radius:7px;padding:8px 9px;background:#fff}input[type=checkbox]{width:auto}
-    button{justify-self:start;border:0;border-radius:7px;padding:8px 13px;background:#3157d5;color:white;font:inherit;cursor:pointer}.empty{color:#64748b}
+    ::slotted(button){justify-self:start;border:0;border-radius:7px;padding:8px 13px;background:#3157d5;color:white;font:inherit;cursor:pointer}.empty{color:#64748b}
   `;
-  constructor(){super();this.resource=undefined;this._value=undefined;this._schema=null;this._contextUnsubscribe=null;}
+  constructor(){
+    super();
+    this.resource=undefined;
+    this._value=undefined;
+    this._schema=null;
+    this._contextUnsubscribe=null;
+    this._contextProvider=new ResourceContextController(this,()=>this._value,()=>this._schema);
+  }
   connectedCallback(){
     super.connectedCallback();
     queueMicrotask(()=>{
@@ -29,10 +37,25 @@ export class DataForm extends LitElement {
     const keys=fieldNames(value,this._schema);
     return html`<div class="form" role="form">
       ${keys.map(name=>this.#field(name,value[name],this._schema?.properties?.[name]))}
-      <button type="button" @click=${()=>this.#save()}>Save</button>
+      <slot></slot>
     </div>`;
   }
-  #setContext(resource,schema){this._schema=schema||null;this._value=cloneValue(resource);this.requestUpdate();}
+  reportValidity(){
+    let valid=true;
+    for(const control of this.renderRoot.querySelectorAll('input,select,textarea')){
+      if(typeof control.reportValidity==='function'&&!control.reportValidity())valid=false;
+    }
+    for(const control of this.querySelectorAll('input,select,textarea,form-input,form-textarea,form-select,form-checkbox,form-radio')){
+      if(typeof control.reportValidity==='function'&&!control.reportValidity())valid=false;
+    }
+    return valid;
+  }
+  #setContext(resource,schema){
+    this._schema=schema||null;
+    this._value=cloneValue(resource);
+    this._contextProvider.resourceChanged();
+    this.requestUpdate();
+  }
   #field(name,value,schema){
     const label=humanizeField(name), required=Boolean(this._schema?.required?.includes(name)), disabled=Boolean(schema?.readOnly);
     if(Array.isArray(schema?.enum))return html`<label class="field"><span class="label">${label}</span><select ?required=${required} ?disabled=${disabled} .value=${String(value??'')} @change=${e=>this.#set(name,e.currentTarget.value)}>${schema.enum.map(option=>html`<option value=${String(option)}>${String(option)}</option>`)}</select></label>`;
@@ -42,14 +65,14 @@ export class DataForm extends LitElement {
     const inputType=type==='integer'||type==='number'?'number':schema?.format==='email'?'email':schema?.format==='date'?'date':schema?.format==='date-time'?'datetime-local':'text';
     return html`<label class="field"><span class="label">${label}</span><input type=${inputType} ?required=${required} ?disabled=${disabled} .value=${value==null?'':String(value)} @input=${e=>this.#set(name,inputType==='number'?(e.currentTarget.value===''?null:e.currentTarget.valueAsNumber):e.currentTarget.value)}></label>`;
   }
-  #set(name,value){if(this._value&&typeof this._value==='object'){this._value[name]=value;this.requestUpdate();}}
-  #setJson(name,text){try{this.#set(name,JSON.parse(text));}catch{/* keep last valid value */}}
-  #save(){
-    for(const control of this.renderRoot.querySelectorAll('input,select,textarea')){
-      if(typeof control.reportValidity==='function'&&!control.reportValidity())return;
+  #set(name,value){
+    if(this._value&&typeof this._value==='object'){
+      this._value[name]=value;
+      this._contextProvider.resourceChanged();
+      this.requestUpdate();
     }
-    this.dispatchEvent(new CustomEvent('save',{detail:{resource:cloneValue(this._value)},bubbles:true,composed:true}));
   }
+  #setJson(name,text){try{this.#set(name,JSON.parse(text));}catch{/* keep last valid value */}}
 }
 
 export class DataLabel extends LitElement {
@@ -92,7 +115,7 @@ export class FormSelect extends FormBoundControl {
   constructor(){super();this._options=[];}
   connectedCallback(){super.connectedCallback();queueMicrotask(()=>this.#syncOptions());}
   #syncOptions(){this._options=[...this.querySelectorAll(':scope > option')].map(option=>({value:option.value,label:option.textContent||option.value,disabled:option.disabled}));this.requestUpdate();}
-  render(){return html`<label><span class="label">${this.fieldLabel()}</span><select .value=${String(this.currentValue()??'')} ?required=${this.required} ?disabled=${this.disabled} @change=${e=>this.updateValue(e.currentTarget.value,e)}>${this._options.map(option=>html`<option value=${option.value} ?disabled=${option.disabled}>${option.label}</option>`)} </select><slot hidden @slotchange=${()=>this.#syncOptions()}></slot></label>`;}
+  render(){return html`<label><span class="label">${this.fieldLabel()}</span><select .value=${String(this.currentValue()??'')} ?required=${this.required} ?disabled=${this.disabled} @change=${e=>this.updateValue(e.currentTarget.value,e)}>${this._options.map(option=>html`<option value=${option.value} ?disabled=${option.disabled}>${option.label}</option>`)}</select><slot hidden @slotchange=${()=>this.#syncOptions()}></slot></label>`;}
 }
 export class FormCheckbox extends FormBoundControl {
   render(){return html`<label><input type="checkbox" .checked=${Boolean(this.currentValue())} ?disabled=${this.disabled} @change=${e=>this.updateValue(e.currentTarget.checked,e)}><span><slot>${this.fieldLabel()}</slot></span></label>`;}
