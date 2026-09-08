@@ -36,7 +36,8 @@ test('component skills teach the declarative primitive API',()=>{
     assert.doesNotMatch(source,/data-resource/);
   }
   assert.match(creator,/multiple `<data-source>`/i);
-  assert.match(authoring,/flat source attributes\/properties/i);
+  assert.match(authoring,/flat parameter/i);
+  assert.match(authoring,/path\/query\/header/i);
   assert.match(authoring,/kebab-case HTML attributes/i);
 });
 
