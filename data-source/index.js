@@ -108,11 +108,38 @@ export function subscribeDataRuntime(callback) {
   return () => runtime.subscribers.delete(callback);
 }
 
-export function invalidateDataRuntime({ clear = false, reason = 'mutation' } = {}) {
-  runtime.epoch += 1;
-  if (clear) runtime.cache.clear();
-  else for (const entry of runtime.cache.values()) entry.stale = true;
-  notify({ type:'invalidate', reason, clear, epoch:runtime.epoch });
+export function invalidateDataRuntime({ clear = false, reason = 'mutation', operation = null, args = null } = {}) {
+  const scoped = !clear && operation && args && !['GET','HEAD'].includes(String(operation.method || '').toUpperCase());
+  let invalidated = 0;
+
+  if (clear) {
+    runtime.epoch += 1;
+    invalidated = runtime.cache.size;
+    runtime.cache.clear();
+  } else if (scoped) {
+    for (const entry of runtime.cache.values()) {
+      if (!mutationAffectsEntry(operation, args, entry)) continue;
+      if (!entry.stale) invalidated += 1;
+      entry.stale = true;
+    }
+  } else {
+    runtime.epoch += 1;
+    for (const entry of runtime.cache.values()) {
+      if (!entry.stale) invalidated += 1;
+      entry.stale = true;
+    }
+  }
+
+  notify({
+    type:'invalidate',
+    reason,
+    clear,
+    scoped,
+    operation:scoped ? operation : null,
+    args:scoped ? invalidationArgs(args) : null,
+    invalidated,
+    epoch:runtime.epoch
+  });
 }
 
 export function invokeDataRequest(operationId, values = {}, options = {}) {
@@ -149,7 +176,7 @@ export function invokeDataRequest(operationId, values = {}, options = {}) {
   if (!isPromiseLike(result)) {
     entry.status = 'success';
     entry.value = result;
-    entry.stale = requestEpoch !== runtime.epoch;
+    entry.stale = entry.stale || requestEpoch !== runtime.epoch;
     queueMicrotask(() => notify({ type:'query', entry }));
     return result;
   }
@@ -159,14 +186,14 @@ export function invokeDataRequest(operationId, values = {}, options = {}) {
       entry.status = 'success';
       entry.value = value;
       entry.error = null;
-      entry.stale = requestEpoch !== runtime.epoch;
+      entry.stale = entry.stale || requestEpoch !== runtime.epoch;
       notify({ type:'query', entry });
       return value;
     },
     error => {
       entry.status = 'error';
       entry.error = error;
-      entry.stale = requestEpoch !== runtime.epoch;
+      entry.stale = entry.stale || requestEpoch !== runtime.epoch;
       notify({ type:'query-error', entry, error });
       throw error;
     }
@@ -232,13 +259,13 @@ function mutate(invoke, operation, args) {
     throw error;
   }
   if (!isPromiseLike(result)) {
-    invalidateDataRuntime({ reason:operation.operationId });
+    invalidateDataRuntime({ reason:operation.operationId, operation, args });
     notify({ type:'mutation', operation, args, value:result });
     return result;
   }
   return Promise.resolve(result).then(
     value => {
-      invalidateDataRuntime({ reason:operation.operationId });
+      invalidateDataRuntime({ reason:operation.operationId, operation, args });
       notify({ type:'mutation', operation, args, value });
       return value;
     },
@@ -247,6 +274,40 @@ function mutate(invoke, operation, args) {
       throw error;
     }
   );
+}
+
+function mutationAffectsEntry(operation, args, entry) {
+  if (!entry?.operation || !['GET','HEAD'].includes(String(entry.operation.method || '').toUpperCase())) return false;
+  const mutationPath = concreteOperationPath(operation, args);
+  const queryPath = concreteOperationPath(entry.operation, entry.args);
+  if (!mutationPath || !queryPath) return false;
+  if (queryPath === mutationPath) return true;
+
+  const method = String(operation.method || '').toUpperCase();
+  if (!['PATCH','PUT','DELETE'].includes(method)) return false;
+  return queryPath === parentResourcePath(mutationPath);
+}
+
+function concreteOperationPath(operation, args) {
+  try { return normalizeResourcePath(expandPath(operation.path, args?.path || {}, operation.operationId)); }
+  catch { return ''; }
+}
+
+function normalizeResourcePath(value) {
+  const path = String(value || '').split('?')[0].replace(/\/+/g,'/');
+  if (!path) return '/';
+  return path.length > 1 ? path.replace(/\/+$/,'') : path;
+}
+
+function parentResourcePath(value) {
+  const path = normalizeResourcePath(value);
+  if (path === '/') return '/';
+  const index = path.lastIndexOf('/');
+  return index <= 0 ? '/' : path.slice(0,index);
+}
+
+function invalidationArgs(args) {
+  return { path:{ ...(args?.path || {}) } };
 }
 
 function notify(event) {
