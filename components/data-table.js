@@ -20,7 +20,7 @@ export class DataTable extends HTMLElement {
   #renderQueued=false;
   #columns=[];
   #observer=null;
-  #actionOverrides=null;
+  #hostObserver=null;
 
   constructor() {
     super();
@@ -38,6 +38,11 @@ export class DataTable extends HTMLElement {
       if (records.some(record=>directAuthoredChildrenChanged(record,this))) this.#schedule();
     });
     this.#observer.observe(this,{childList:true});
+    const host=componentHost(this);
+    if (host) {
+      this.#hostObserver=new MutationObserver(()=>this.#schedule());
+      this.#hostObserver.observe(host,{childList:true});
+    }
     queueMicrotask(()=>{
       if (this.#resourceInput === undefined) {
         this.#contextUnsubscribe=requestResourceContext(this,(resource,schema)=>{
@@ -52,6 +57,8 @@ export class DataTable extends HTMLElement {
   disconnectedCallback() {
     this.#observer?.disconnect();
     this.#observer=null;
+    this.#hostObserver?.disconnect();
+    this.#hostObserver=null;
     this.#contextUnsubscribe?.();
     this.#contextUnsubscribe=null;
     this.removeEventListener(RESOURCE_CONTEXT_REQUEST,this._onContext);
@@ -64,8 +71,6 @@ export class DataTable extends HTMLElement {
   get resolvedResource() { return this.#resource; }
   set columns(value) { this.#columns=Array.isArray(value)?value:[]; this.#schedule(); }
   get columns() { return this.#columns; }
-  set actionOverrides(value) { this.#actionOverrides=Array.isArray(value)&&value.length?value:null; this.#schedule(); }
-  get actionOverrides() { return this.#actionOverrides; }
   set actions(_value) { throw new Error('<data-table>.actions was removed. Author data-action/data-operation HTML inside <data-table> instead.'); }
 
   #schedule() {
@@ -98,7 +103,8 @@ export class DataTable extends HTMLElement {
   #renderAuto() {
     const authored=authoredActionTemplates(this);
     for (const source of authored) markActionTemplate(source);
-    const actionTemplates=this.#actionOverrides || authored;
+    const overrides=componentActionOverrides(this);
+    const actionTemplates=overrides.length?overrides:authored;
 
     let table=this.querySelector(':scope > table[data-metaproject-auto]');
     if (!table) { table=document.createElement('table');table.setAttribute('data-metaproject-auto','');this.append(table); }
@@ -164,6 +170,17 @@ function authoredActionTemplates(table){
     if (element.hasAttribute('data-metaproject-auto')) return false;
     return hasActionIntent(element);
   });
+}
+function componentActionOverrides(table){
+  const root=table.getRootNode?.();
+  const host=componentHost(table);
+  if (!host || root?.querySelector?.('data-table')!==table) return [];
+  return [...host.children].filter(element=>hasActionIntent(element));
+}
+function componentHost(table){
+  const root=table.getRootNode?.();
+  const host=root?.host;
+  return typeof Element!=='undefined'&&host instanceof Element?host:null;
 }
 function hasActionIntent(element){return element.hasAttribute('data-action')||element.hasAttribute('data-operation')||Boolean(element.querySelector?.('[data-action],[data-operation]'));}
 function markActionTemplate(element){
