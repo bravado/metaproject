@@ -1,15 +1,17 @@
 ---
 name: metaproject-component-creator
-description: Create the smallest useful Metaproject UI from OpenAPI operations using data-source, data-table, data-form, semantic data-action events, and data-operation.
+description: Create the smallest useful reusable Web Components from modeled OpenAPI operations using data-source, data-table, data-form, semantic data-action events, and data-operation.
 ---
 
 # Create Components from OpenAPI
 
-Read `openapi.yaml`, existing `components/`, and `skills/component-authoring/SKILL.md`.
+Read the configured OpenAPI document, existing component source, and `skills/component-authoring/SKILL.md`.
+
+The output is reusable Web Components, not Canvas-specific UI. A component should make sense when imported into any host application. Canvas may preview/compose it, but application routing and layout belong to the host.
 
 Prefer a few domain components over abstraction layers. Put component context in `<title>` metadata instead of rendering duplicate headings.
 
-A typical collection component is just:
+A collection component can be:
 
 ```html
 <title>Users</title>
@@ -18,7 +20,7 @@ A typical collection component is just:
 </data-source>
 ```
 
-A collection with a row action remains reusable and HTML-first:
+A collection with semantic row intent:
 
 ```html
 <title>Users</title>
@@ -29,9 +31,9 @@ A collection with a row action remains reusable and HTML-first:
 </data-source>
 ```
 
-The component emits the semantic `edit` event. A standalone app handles it with `@edit=${...}` / `addEventListener('edit', ...)`; Canvas composition belongs in `metaproject.yaml` `on:` bindings.
+The component emits the normal `edit` CustomEvent. A host application handles it with `@edit=${...}` or `addEventListener('edit', ...)`.
 
-A parameterized component can expose its active context through the Canvas title:
+A parameterized mutation component:
 
 ```html
 <title>User — ${id}</title>
@@ -45,25 +47,26 @@ A parameterized component can expose its active context through the Canvas title
 
 Rules:
 
-- use `<title>` for component/chrome context; do not generate a matching `<header>`/`<h1>` inside the component;
+- use `<title>` as component metadata; do not generate a matching `<header>`/`<h1>` unless it is real UX content;
 - title text may reference declared component properties with `${property}`;
+- declare public inputs with `<component-property>`; primitive camelCase properties compile to kebab-case HTML attributes (`dbName` → `db-name`);
 - use `request="operationId"` for reads; never generate direct `api.*` calls;
-- bind OpenAPI parameters as flat kebab-case attributes;
+- bind OpenAPI parameters on `<data-source>` as flat kebab-case attributes;
 - use `select="path.to.value"` only when the useful resource is nested in the response;
-- use multiple data-sources for multiple queries;
+- use multiple `<data-source>` elements for multiple queries; they share Core's query cache;
 - put mutations directly on action elements with `data-operation="operationId"`;
 - never generate `save=` on `<data-source>` or event-to-operation maps;
-- let data-table and data-form render automatically unless the UX genuinely needs explicit markup;
-- put automatic table row actions directly inside `<data-table>` as `data-action` / `data-operation` HTML; never generate `.actions` arrays;
+- let `data-table` and `data-form` render automatically unless the UX genuinely needs explicit markup;
+- put automatic row actions directly inside `<data-table>` as `data-action` / `data-operation` HTML; never generate `.actions` arrays;
 - use semantic `data-action` events for UI/application intent that is not itself an API operation;
-- keep Canvas/application composition out of reusable component source; prefer `metaproject.yaml` `on:` bindings instead of `navigate()`;
-- direct action children on a component are row-action overrides for its first automatic data-table;
-- keep required component property examples small so standalone previews and initial Canvas titles are useful;
+- keep host routing/composition out of reusable component source;
+- direct action children on a component are row-action overrides for its first automatic `data-table`;
+- keep property examples small so development previews are useful;
 - never generate cache keys, refresh tokens, custom invalidation events, or Promise composition loaders.
 
 Finish with:
 
 ```bash
-npx metaproject openapi check-examples
+npx metaproject check
 npx metaproject build
 ```
