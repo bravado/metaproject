@@ -1,6 +1,6 @@
 ---
 name: metaproject-component-authoring
-description: Author or modify Metaproject HTML-first Web Components under components/ using scoped DataSource access, resource context, semantic actions, and api.<operationId>() calls.
+description: Author or modify Metaproject HTML-first Web Components under components/ using inherited DataSource access, resource context, semantic actions, and api.<operationId>() calls.
 ---
 
 # Metaproject Component Authoring
@@ -18,56 +18,47 @@ components/user-edit/
 └── component.js     # optional
 ```
 
-`components/user-edit/` defines `<user-edit>`.
-
 `component.html` has no outer `<template>`:
 
 ```html
-<title>Edit User</title>
-<component-property name="id" type="integer" required example="1"></component-property>
-
-<data-resource .resource=${api.getUser({ path: { id } })}>
-  <data-label field="name"></data-label>
-</data-resource>
+<title>User List</title>
+<data-table .resource=${api.listUsers()}></data-table>
 ```
 
-`<title>` and `<component-property>` are metadata and are not rendered as body content. Add a visible heading only when the component UX itself needs one. Use property `example` values for required inputs so standalone rendering has enough context.
+`<title>` and `<component-property>` are metadata and are not rendered as body content. Use property `example` values for required inputs so standalone Canvas rendering has enough context.
 
 ## DataSource architecture
 
-Every compiled component can resolve a `DataSource`. Resolution order is:
+Every compiled component resolves a DataSource automatically, in this order:
 
-1. the component's explicit `.dataSource` property;
-2. the nearest `<data-source>` provider;
-3. the application's default DataSource.
+1. explicit component `.dataSource`;
+2. nearest contextual `<data-source>` provider;
+3. application default DataSource.
 
-The compiled application creates its default DataSource from `openapi.yaml` plus `metaproject.yaml` `api_root`. Canvas supplies the same contract and switches that default source between Mock and HTTP clients.
+The compiled application creates its default DataSource from `openapi.yaml` plus `metaproject.yaml` `api_root`. Canvas provides the same contract with its Mock/HTTP selector.
 
-A `DataSource` owns state:
+A DataSource owns:
 
-- cached GET/HEAD queries;
+- GET/HEAD cache;
 - in-flight request deduplication;
 - subscriptions;
 - invalidation after mutations.
 
-The client underneath it is transport only. It exposes REST verbs such as `get`, `post`, `put`, `patch`, and `delete` and does not own application state.
+The client below it is only REST transport.
 
-Component source uses the DataSource API facade through the compiler-provided `api` variable:
+### Do not wrap normal component queries in `<data-source>`
 
-```js
-api.getUser({ path: { id } })
-api.updateUser({ path: { id }, body: resource })
-```
-
-Do not add component-specific cache keys, invalidation events, refresh tokens, or duplicate request stores. Successful POST/PUT/PATCH/DELETE operations invalidate cached reads through the shared DataSource.
-
-A component can force a refresh through the compiler-provided `dataSource` variable:
+Normal API-backed components should call the compiler-provided `api` directly:
 
 ```html
-<button type="button" @click=${() => dataSource.invalidate()}>Refresh</button>
+<data-table
+  .resource=${Promise.resolve(api.listUsers()).then(page => page?.data || page || [])}
+></data-table>
 ```
 
-Applications can override the source for a subtree:
+Do **not** add a `<data-source>` block just because the component calls an API. The component already inherits the contextual/default source.
+
+Use `<data-source>` only when the component/application intentionally introduces a different DataSource for a subtree, for example:
 
 ```html
 <data-source .source=${billingSource}>
@@ -75,59 +66,72 @@ Applications can override the source for a subtree:
 </data-source>
 ```
 
-or one component:
+or:
+
+```html
+<data-source url="/secondary-api">
+  <secondary-resource-list></secondary-resource-list>
+</data-source>
+```
+
+A direct component override is also valid:
 
 ```html
 <invoice-list .dataSource=${billingSource}></invoice-list>
 ```
 
-A provider can also be created from a direct REST base URL when the default OpenAPI operation table is appropriate:
+Do not add component-specific cache keys, refresh tokens, custom invalidation events, or duplicate request stores. Successful POST/PUT/PATCH/DELETE operations invalidate shared cached reads automatically.
+
+A component may explicitly refresh its inherited source when the UX needs a manual refresh button:
 
 ```html
-<data-source url="/other-api">
-  <user-list></user-list>
-</data-source>
+<button type="button" @click=${() => dataSource.invalidate()}>Refresh</button>
 ```
 
 ## Resource context
 
 `<data-source>` provides a DataSource, not a record value.
 
-Use `<data-resource>` when a fetched or supplied value should become resource context for inner fields:
-
-```html
-<data-resource .resource=${api.getUser({ path: { id } })}>
-  <data-label field="name"></data-label>
-  <form-input field="email"></form-input>
-</data-resource>
-```
-
-`<data-resource>` may also execute an operation using the resolved DataSource:
+Use `<data-resource>` only when one fetched/supplied object must become resource context for nested fields:
 
 ```html
 <data-resource
-  operation="getUser"
-  .args=${{ path: { id } }}
+  .resource=${api.getUser({ path: { id } })}
+  @save=${event => api.updateUser({ path: { id }, body: event.detail.resource })}
 >
+  <form-input field="name"></form-input>
+  <button type="button" data-action="save" data-validate>Save</button>
+</data-resource>
+```
+
+`<data-resource>` may also invoke one operation through the resolved DataSource:
+
+```html
+<data-resource operation="getUser" .args=${{ path: { id } }}>
   <data-label field="name"></data-label>
 </data-resource>
 ```
 
-Use Metaproject's data-aware primitives:
+Use Metaproject data primitives as follows:
 
-- `data-source` scopes a DataSource;
-- `data-resource` provides one resolved resource as context;
+- `data-source` scopes/overrides a DataSource;
+- `data-resource` provides one resource as context;
 - `data-table` provides row context;
-- `data-label field="..."` reads a field;
-- `form-input`, `form-textarea`, `form-select`, `form-checkbox`, `form-radio` edit fields in the current resource.
-
-Prefer context over manually threading the same record through many nested components.
+- `data-label` reads context fields;
+- `form-*` edits context fields.
 
 ## API calls
 
-Use `api.<operationId>()` for modeled backend calls. The operation name comes from `openapi.yaml`. Do not hard-code equivalent `fetch()` calls when an Operation exists.
+Use `api.<operationId>()` for modeled backend calls:
 
-Multiple components calling the same GET operation with the same arguments share the DataSource cache and in-flight request. Development uses OpenAPI examples through the Canvas Mock client; production uses the REST client pointed at the project's `api_root`. Component source is unchanged.
+```js
+api.getUser({ path: { id } })
+api.updateUser({ path: { id }, body: resource })
+```
+
+Do not hard-code equivalent `fetch()` calls when an OpenAPI operation exists.
+
+Multiple components calling the same GET operation with the same arguments share the DataSource cache and in-flight request. Development uses OpenAPI examples through Canvas Mock mode; production uses the REST client pointed at `api_root`. Component source is unchanged.
 
 ## Actions
 
@@ -138,28 +142,13 @@ Application actions are semantic buttons, not native form submissions:
 <button type="button" data-action="delete">Delete</button>
 ```
 
-Handle the corresponding event on the resource owner:
-
-```html
-<data-resource
-  .resource=${api.getUser({ path: { id } })}
-  @save=${event => api.updateUser({
-    path: { id: event.detail.resource.id },
-    body: event.detail.resource
-  })}>
-  ...
-</data-resource>
-```
-
-Use `data-validate` when an action should validate its containing form first.
+Handle semantic events on the resource owner (`data-resource` or `data-table`). Use `data-validate` when the action should validate its containing form first.
 
 ## Lists and composition
 
-Use a real table inside `data-table` and `<template data-row>` for repeated rows. Reuse custom components for meaningful domain/UI concepts, not for every wrapper or button.
+Use a real table inside `data-table` and `<template data-row>` for repeated rows when the schema is stable.
 
-`<template data-row>` is inert native template content and must be static. Never place `${...}`, `.prop=${...}`, or `@event=${...}` inside it. `data-table` clones that DOM and provides each cloned row as resource context.
-
-Put dynamic bindings and handlers on `<data-table>` itself, then use context-aware primitives and semantic actions inside the row template:
+`<template data-row>` is native inert template content and must be static. Never put `${...}`, `.prop=${...}`, or `@event=${...}` inside it. Put dynamic handlers/bindings on `<data-table>` itself and use row-context elements inside the template:
 
 ```html
 <data-table
@@ -179,9 +168,9 @@ Put dynamic bindings and handlers on `<data-table>` itself, then use context-awa
 </data-table>
 ```
 
-For genuinely dynamic records where columns are not known at authoring time, omit the native row template and give `data-table` column/action descriptors. If `columns` is omitted too, columns are inferred from the first object row.
+For runtime-defined records, omit the native row template and use `data-table` auto mode with `.columns` / `.actions` as needed.
 
-Use `navigate('<component-tag>', properties)` when one component opens another.
+Use `navigate('<component-tag>', properties)` when one component updates another. A semantic selection may call `navigate()` for multiple independent target panels when they share the same selection.
 
 ## Finish
 
