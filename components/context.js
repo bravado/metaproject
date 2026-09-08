@@ -1,5 +1,6 @@
 export const RESOURCE_CONTEXT_REQUEST = 'metaproject-resource-context-request';
 export const RESOURCE_CHANGE_EVENT = 'metaproject-resource-change';
+export const METAPROJECT_ACTION_EVENT = 'metaproject-action';
 const ACTION_EVENTS = new WeakSet();
 
 export function claimDataActionEvent(event){if(ACTION_EVENTS.has(event))return false;ACTION_EVENTS.add(event);return true;}
@@ -67,6 +68,44 @@ export class ResourceContextController {
   }
 }
 
+/**
+ * HTML-first components expose their first automatic data-table row-action area
+ * to direct light-DOM action children. Consumers attach behavior to the
+ * component's semantic CustomEvents; the projected children are declarative
+ * action templates only.
+ */
+export class ComponentActionProjectionController {
+  constructor(host) {
+    this.host=host;
+    this.observer=null;
+    this.queued=false;
+    host.addController?.(this);
+  }
+  hostConnected() {
+    if (typeof MutationObserver !== 'undefined') {
+      this.observer=new MutationObserver(()=>this.#queue());
+      this.observer.observe(this.host,{childList:true});
+    }
+    this.#queue();
+  }
+  hostUpdated() { this.#queue(); }
+  hostDisconnected() {
+    this.observer?.disconnect();
+    this.observer=null;
+  }
+  #queue() {
+    if (this.queued) return;
+    this.queued=true;
+    queueMicrotask(()=>{this.queued=false;this.#apply();});
+  }
+  #apply() {
+    const table=this.host.renderRoot?.querySelector?.('data-table');
+    if (!table) return;
+    const overrides=[...this.host.children].filter(element=>hasActionIntent(element));
+    table.actionOverrides=overrides.length?overrides:null;
+  }
+}
+
 export function readDataField(resource,path){
   if(!path)return resource;
   return String(path).split('.').reduce((value,key)=>value?.[key],resource);
@@ -87,7 +126,9 @@ export function writeDataField(resource,path,value){
 export function emitDataAction(element,resource,originalEvent){
   const action=element.getAttribute('data-action')?.trim();
   if(!action||!/^[A-Za-z][A-Za-z0-9_.:-]*$/.test(action))return;
-  element.dispatchEvent(new CustomEvent(action,{bubbles:true,composed:true,detail:{action,resource,originalEvent}}));
+  const detail={action,resource,originalEvent};
+  element.dispatchEvent(new CustomEvent(action,{bubbles:true,composed:true,detail}));
+  element.dispatchEvent(new CustomEvent(METAPROJECT_ACTION_EVENT,{bubbles:true,composed:true,detail:{action,resource}}));
 }
 
 export function humanizeField(value){
@@ -101,6 +142,14 @@ function actionElementForEvent(event,provider){
     if(node instanceof Element&&node.hasAttribute?.('data-action'))return node;
   }
   return null;
+}
+
+function hasActionIntent(element){
+  return element instanceof Element && (
+    element.hasAttribute('data-action') ||
+    element.hasAttribute('data-operation') ||
+    Boolean(element.querySelector?.('[data-action],[data-operation]'))
+  );
 }
 
 function validateFormControls(form){
