@@ -1,6 +1,6 @@
 ---
 name: metaproject-component-authoring
-description: Author Metaproject HTML-first components using declarative data-source requests, automatic data-table/data-form rendering, direct data-operation actions, and navigation.
+description: Author Metaproject HTML-first components using declarative data-source requests, automatic data-table/data-form rendering, semantic actions, and direct data-operation actions.
 ---
 
 # Metaproject Component Authoring
@@ -14,7 +14,8 @@ Use these primitives:
 - `<data-source>` executes one OpenAPI read request and provides its result as resource context.
 - `<data-table>` consumes the nearest resource and renders it as a table automatically. Direct authored `data-action`/`data-operation` children become row actions in an automatic Actions column.
 - `<data-form>` consumes the nearest object resource and generates editable fields from OpenAPI schema/runtime types.
-- `data-operation="operationId"` on an action element executes that OpenAPI operation through the nearest `<data-source>`.
+- `data-action="name"` emits a normal bubbling/composed semantic CustomEvent carrying `event.detail.resource`.
+- `data-operation="operationId"` executes that OpenAPI operation through the nearest `<data-source>`.
 - `<data-label>` and `form-*` remain available for explicitly authored UIs.
 
 Do not call `api.<operationId>()`. Components do not receive an API facade.
@@ -31,7 +32,7 @@ It may reference declared component properties:
 <component-property name="tableName" type="string" required example="users"></component-property>
 ```
 
-Canvas reevaluates the title when navigation changes those properties. Do not duplicate the same context with a rendered `<header>`/`<h1>` unless the heading is genuinely part of the component UX.
+Canvas reevaluates the title when composition changes those properties. Do not duplicate the same context with a rendered `<header>`/`<h1>` unless the heading is genuinely part of the component UX.
 
 ## Reads
 
@@ -85,7 +86,7 @@ Use multiple `<data-source>` elements. Do not build Promise composition loaders.
 
 ## Operations
 
-Put the mutation operation directly on the action element:
+Put mutations directly on action elements:
 
 ```html
 <data-source request="getUser" id=${id}>
@@ -107,6 +108,42 @@ Use the same primitive for other operations:
 
 Do not use `save=` on `<data-source>` and do not build event-to-operation maps.
 
+## Semantic actions
+
+Use `data-action` for UI/application intent that is not itself an API operation:
+
+```html
+<button data-action="open">Open</button>
+```
+
+It emits a normal CustomEvent named `open` with:
+
+```js
+{
+  action: 'open',
+  resource,
+  originalEvent
+}
+```
+
+The event bubbles and crosses the component shadow boundary (`composed: true`). Standalone applications attach ordinary DOM listeners:
+
+```html
+<db-table-list
+  .dbName=${dbName}
+  @open=${event => showTable(event.detail.resource)}
+></db-table-list>
+```
+
+or:
+
+```js
+const tables = document.querySelector('db-table-list');
+tables.addEventListener('open', event => showTable(event.detail.resource));
+```
+
+Keep composition/navigation outside reusable component source when the behavior belongs to the application or Canvas.
+
 ## Tables
 
 An array of objects generates columns from response schema/object keys. Arrays of primitives generate one Value column. An object generates Field/Value rows.
@@ -115,9 +152,7 @@ Author row actions directly as HTML inside the automatic table. Each authored ac
 
 ```html
 <data-source request="listUsers">
-  <data-table
-    @open=${event => navigate('user-edit', { id:event.detail.resource.id })}
-  >
+  <data-table>
     <button data-action="open">Open</button>
     <button data-operation="deleteUser">Delete</button>
   </data-table>
@@ -129,16 +164,28 @@ This automatically adds an `Actions` column. Do not use `.actions`; table action
 Conditional actions may use normal Lit expressions because they are outside native row templates:
 
 ```html
-<data-table @edit=${event => navigate('user-edit', { id:event.detail.resource.id })}>
+<data-table>
   ${writable ? html`<button data-action="edit">Edit</button>` : nothing}
 </data-table>
 ```
+
+### Component-level row action overrides
+
+The direct action children of an HTML-first component override the default actions of its first automatic `data-table`:
+
+```html
+<db-table-list @select=${event => choose(event.detail.resource)}>
+  <button data-action="select">Select</button>
+</db-table-list>
+```
+
+The projected action markup is cloned per row and receives that row's resource context. Event handlers belong on the component host (`@select` / `addEventListener`), not on the projected button template.
 
 For full custom row placement, use a static native row template. Never put Lit expressions inside `<template data-row>`:
 
 ```html
 <data-source request="listUsers">
-  <data-table @open=${event => navigate('user-edit', { id:event.detail.resource.id })}>
+  <data-table>
     <table><tbody><template data-row>
       <tr>
         <td><data-label field="name"></data-label></td>
@@ -157,9 +204,43 @@ For full custom row placement, use a static native row template. Never put Lit e
 
 Use explicit `form-*` controls only when the automatic form is not sufficient.
 
-## Navigation
+## Canvas composition
 
-Use `navigate('<component-tag>', properties)`. A single selection may update multiple independent panels by calling `navigate()` for each target.
+Canvas consumes the same semantic events through `metaproject.yaml`. Put `on:` on the source component item:
+
+```yaml
+- resource: { type: component, ref: db-table-list }
+  on:
+    open:
+      - target: db-table-schema
+        properties:
+          dbName: { from: source.dbName }
+          tableName: { from: event.resource.name }
+      - target: db-table-rows
+        properties:
+          dbName: { from: source.dbName }
+          tableName: { from: event.resource.name }
+```
+
+Available binding roots are:
+
+- `source.*` — current properties of the source Canvas component;
+- `event.resource.*` — the resource associated with the semantic action;
+- `event.detail.*` — the semantic action detail.
+
+Dynamic row keys are supported without JavaScript:
+
+```yaml
+id: { from: event.resource[source.primaryKey] }
+```
+
+Mappings may provide a fallback:
+
+```yaml
+primaryKey: { from: event.resource.primaryKey, default: id }
+```
+
+Use Canvas bindings for application composition. Keep `navigate()` only for components whose own reusable behavior genuinely requires navigation independent of Canvas.
 
 ## Finish
 
