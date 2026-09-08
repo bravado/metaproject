@@ -4,7 +4,7 @@ import { readFile, readdir, writeFile, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { parseComponentSource, splitLitTemplate, compileComponentModule, designTimeProperties } from '../compiler/index.js';
+import { parseComponentSource, splitLitTemplate, compileComponentModule, designTimeProperties, tagFromComponentPath } from '../compiler/index.js';
 
 const detailSource=await readFile('tests/fixtures/components/user-detail/component.html','utf8');
 const editSource=await readFile('tests/fixtures/components/user-edit/component.html','utf8');
@@ -46,6 +46,25 @@ test('compiled modules only inject navigation runtime',()=>{
   assert.doesNotMatch(module,/DataSourceConsumerController/);
   assert.doesNotMatch(module,/const api =/);
   assert.doesNotMatch(module,/createProperty\('dataSource'/);
+});
+
+test('primitive component properties expose predictable standalone HTML attributes',()=>{
+  const source=`
+    <component-property name="dbName" type="string"></component-property>
+    <component-property name="userId" type="integer" attribute="uid"></component-property>
+    <component-property name="resource" type="User"></component-property>
+    <component-property name="secret" type="string" attribute="false"></component-property>
+  `;
+  const module=compileComponentModule({tag:'sample-card',source});
+  assert.match(module,/"dbName": \{ type:String, attribute:"db-name" \}/);
+  assert.match(module,/"userId": \{ type:Number, attribute:"uid" \}/);
+  assert.match(module,/"resource": \{ attribute:false \}/);
+  assert.match(module,/"secret": \{ attribute:false \}/);
+});
+
+test('component tag inference works with a configured source directory not named components',()=>{
+  assert.equal(tagFromComponentPath('/workspace/app/frontend/metaproject/user-card/component.html'),'user-card');
+  assert.equal(tagFromComponentPath('ui/admin-table/component.html'),'admin-table');
 });
 
 test('Lit splitter preserves nested expressions',()=>{const source=`<div>\${items.map(item => html\`<b>\${item.name}</b>\`)}</div>`;const split=splitLitTemplate(source);assert.equal(split.expressions.length,1);});
