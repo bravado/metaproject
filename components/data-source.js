@@ -6,6 +6,7 @@ import {
   selectDataSchema
 } from '../data-source/index.js';
 import { ResourceContextController, requestResourceContext } from './context.js';
+import { operationBodyFromResource } from './operation-body.js';
 
 export class DataSourceElement extends HTMLElement {
   static get observedAttributes() { return ['request','select']; }
@@ -130,7 +131,7 @@ export class DataSourceElement extends HTMLElement {
     try {
       result=invokeDataRequest(operationId,this.#parameters(operation,resource),{
         client:this.#client || undefined,
-        body:operation.requestBody ? resource : undefined
+        body:operationBodyFromResource(operation,resource)
       });
     } catch (error) { return this.#fail(error); }
 
