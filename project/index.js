@@ -54,3 +54,4 @@ function yamlScalar(value) {
 }
 
 export { buildProjectIndex, relatedRelationships, componentTag } from './indexer.js';
+export { checkProject } from './check.js';
