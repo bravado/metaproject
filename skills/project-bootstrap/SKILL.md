@@ -1,0 +1,53 @@
+---
+name: metaproject-project-bootstrap
+description: Start a Metaproject project from scratch by designing the browser-facing OpenAPI contract first, then generating reusable Web Components.
+---
+
+# Bootstrap a New Metaproject Project
+
+Use this when there is no existing application contract to adopt.
+
+## Goal
+
+Treat Metaproject as the glue between an API contract and reusable Web Components:
+
+```text
+API contract (OpenAPI)
+        ↓
+Metaproject data runtime + compiler
+        ↓
+Web Components usable by any application
+```
+
+Canvas is optional development tooling, not the runtime architecture.
+
+## Process
+
+1. Run `npx metaproject init` if the project is not initialized.
+2. Define the smallest browser-facing API needed for the first useful workflow.
+3. Add reusable schemas and stable operations to `openapi.yaml`.
+4. Give every operation/schema an `x-project-id` and every response body a small representative success example.
+5. Use the deterministic mutation tools when adding/updating modeled resources:
+
+```bash
+npx metaproject openapi upsert-entity --input /tmp/entity.json
+npx metaproject openapi upsert-operation --input /tmp/operation.json
+```
+
+6. Run `npx metaproject openapi check-examples`.
+7. Follow `node_modules/metaproject/skills/component-creator/SKILL.md`.
+8. Run:
+
+```bash
+npx metaproject check
+npx metaproject build
+```
+
+## Rules
+
+- Design HTTP capabilities, not source-code methods.
+- Keep operation IDs stable and meaningful (`listUsers`, `getUser`, `updateUser`).
+- Prefer reusable schemas for objects shared by multiple operations.
+- Add examples that make components useful before a live backend exists.
+- Do not put application routing/layout into reusable component source; emit semantic `data-action` events and let the host application decide what they mean.
+- Do not invent a Canvas dependency. Generated components must remain useful in plain HTML, Lit, React/Vue wrappers, server-rendered applications, and other hosts.
