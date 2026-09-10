@@ -36,19 +36,37 @@ components/
 public/components/       # generated, do not edit
 ```
 
-`metaproject.yaml` only needs to describe the API root and source/output paths:
+`metaproject.yaml` describes the contract location and source/output paths:
 
 ```yaml
 version: 1
 name: Example
-api_root: /api
 openapi: openapi.yaml
 components:
   source: components
   output: public/components
 ```
 
-The OpenAPI path and component source/output directories are configurable. Canvas may store optional `canvas:` metadata in the same file, but Core does not require it.
+API endpoint and authentication metadata belong to OpenAPI itself:
+
+```yaml
+servers:
+  - url: /api
+  - url: https://staging.example.test/api
+
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+
+security:
+  - bearer: []
+```
+
+The generated default REST client uses the first resolved top-level OpenAPI server. Canvas can select any declared server for development/testing. Credentials never belong in either project file; hosts and development tools supply them at runtime.
+
+The OpenAPI path and component source/output directories are configurable. Canvas may store optional `canvas:` metadata in `metaproject.yaml`, but Core does not require it.
 
 ## OpenAPI is the API boundary
 
@@ -69,13 +87,15 @@ and:
 OpenAPI owns:
 
 - HTTP method and path;
+- top-level API servers and server variables;
 - parameter location and schema;
 - request-body schema;
 - response schema;
-- stable operation identifiers;
+- security schemes and operation/root security requirements;
+- stable operation identifiers used by Metaproject components;
 - representative development examples.
 
-This keeps components portable when backend URLs, routing implementations, or server frameworks change.
+This keeps components portable when backend routing implementations or server frameworks change. The same component can point at a different deployment by changing the runtime client/server rather than component source.
 
 ## Resource context is the component data model
 
@@ -118,12 +138,12 @@ API mutations are distinct from application intent. `data-operation` invokes Ope
 `npx metaproject build` produces browser-native ESM in the configured component output directory. The output includes:
 
 - operation metadata (`api.js`);
-- the configured/default REST runtime (`runtime.js`);
+- the default REST runtime (`runtime.js`) configured to the first OpenAPI server;
 - one generated module per component;
 - an `index.js` entry point that registers all generated custom elements;
 - `manifest.json` with component metadata.
 
-The generated output contains no Canvas runtime dependency.
+The generated output contains no Canvas runtime dependency. A host application can replace the default client for authentication, session integration, tracing, endpoint selection, or other transport policy without changing component source.
 
 See [using-components.md](using-components.md).
 
@@ -135,6 +155,7 @@ Core also owns the project-development model so every tool works against the sam
 - local or remote OpenAPI import;
 - deterministic OpenAPI operation/schema mutation;
 - OpenAPI example validation;
+- OpenAPI server and security interpretation;
 - API/component project indexing and diagnostics;
 - project contract validation with `metaproject check`;
 - static component build;
