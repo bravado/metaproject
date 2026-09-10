@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { parse as parseYaml } from 'yaml';
 import { generateApiModule, collectApiOperations } from '../operations/index.js';
-import { resolveOpenApiRefs, assertOpenApiExamples } from '../openapi/index.js';
+import { resolveOpenApiRefs, assertOpenApiExamples, collectOpenApiServers, resolveOpenApiServerUrl } from '../openapi/index.js';
 import { compileComponentModule, parseComponentSource, tagFromComponentPath } from '../compiler/index.js';
 
 export const DEFAULT_COMPONENT_SOURCE='components';
@@ -41,7 +41,23 @@ export async function buildProjectComponents({root=process.cwd(),context,minify=
 
 export function discoverProjectComponents(root,sourceDir=DEFAULT_COMPONENT_SOURCE){root=path.resolve(root);const sourceAbsolute=safeProjectPath(root,sourceDir);const out=new Map();if(!fs.existsSync(sourceAbsolute))return out;for(const htmlPath of walk(sourceAbsolute).filter(file=>path.basename(file)==='component.html')){const tag=tagFromComponentPath(htmlPath);if(out.has(tag))throw new Error(`Duplicate Metaproject component tag <${tag}>.`);const dir=path.dirname(htmlPath);const scriptPath=['component.ts','component.js'].map(name=>path.join(dir,name)).find(file=>fs.existsSync(file))||null;const stylePath=path.join(dir,'style.css');out.set(tag,{tag,htmlPath,relativeHtmlPath:normalizeProjectPath(path.relative(root,htmlPath)),scriptPath,stylePath:fs.existsSync(stylePath)?stylePath:null});}return out;}
 
-export function loadProjectBuildContext(root=process.cwd()){root=path.resolve(root);const configPath=path.join(root,'metaproject.yaml');if(!fs.existsSync(configPath))throw new Error(`Metaproject project not found: ${configPath}. Run "npx metaproject init" first.`);const config=parseYaml(fs.readFileSync(configPath,'utf8'))||{};const openapiPath=normalizeProjectPath(config.openapi||DEFAULT_OPENAPI_PATH);const openapiAbsolute=safeProjectPath(root,openapiPath);if(!fs.existsSync(openapiAbsolute))throw new Error(`OpenAPI file not found: ${openapiPath}. Run "npx metaproject init" first.`);const openapi=parseDocument(fs.readFileSync(openapiAbsolute,'utf8'),openapiPath)||{};const resolvedOpenApi=resolveOpenApiRefs(openapi,{sourcePath:openapiPath,readFile:refPath=>fs.readFileSync(safeProjectPath(root,refPath),'utf8'),parseDocument});const apiRoot=config.api_root??'';if(typeof apiRoot!=='string')throw new Error('metaproject.yaml api_root must be a string.');const componentSourceDir=normalizeProjectPath(config.components?.source||DEFAULT_COMPONENT_SOURCE);const outputDir=normalizeProjectPath(config.components?.output||DEFAULT_COMPONENT_OUTPUT);return{root,config,openapiPath,openapiAbsolute,openapi,resolvedOpenApi,apiRoot,componentSourceDir,outputDir};}
+export function loadProjectBuildContext(root=process.cwd()){
+  root=path.resolve(root);
+  const configPath=path.join(root,'metaproject.yaml');
+  if(!fs.existsSync(configPath))throw new Error(`Metaproject project not found: ${configPath}. Run "npx metaproject init" first.`);
+  const config=parseYaml(fs.readFileSync(configPath,'utf8'))||{};
+  if(Object.prototype.hasOwnProperty.call(config,'api_root'))throw new Error('metaproject.yaml api_root was removed. Define the API endpoint with the top-level OpenAPI servers list instead.');
+  const openapiPath=normalizeProjectPath(config.openapi||DEFAULT_OPENAPI_PATH);
+  const openapiAbsolute=safeProjectPath(root,openapiPath);
+  if(!fs.existsSync(openapiAbsolute))throw new Error(`OpenAPI file not found: ${openapiPath}. Run "npx metaproject init" first.`);
+  const openapi=parseDocument(fs.readFileSync(openapiAbsolute,'utf8'),openapiPath)||{};
+  const resolvedOpenApi=resolveOpenApiRefs(openapi,{sourcePath:openapiPath,readFile:refPath=>fs.readFileSync(safeProjectPath(root,refPath),'utf8'),parseDocument});
+  const defaultServer=collectOpenApiServers(resolvedOpenApi)[0];
+  const apiRoot=resolveOpenApiServerUrl(defaultServer);
+  const componentSourceDir=normalizeProjectPath(config.components?.source||DEFAULT_COMPONENT_SOURCE);
+  const outputDir=normalizeProjectPath(config.components?.output||DEFAULT_COMPONENT_OUTPUT);
+  return{root,config,openapiPath,openapiAbsolute,openapi,resolvedOpenApi,apiRoot,componentSourceDir,outputDir};
+}
 
 function runtimeEntrySource(){return `import { DEFAULT_API_ROOT, OPERATIONS } from './api.js';\n`+`import { configureMetaproject as configureRuntime } from 'metaproject/components';\n`+`import { createRestClient } from 'metaproject/data-source';\n`+`export const defaultClient = createRestClient({ baseUrl: DEFAULT_API_ROOT });\n`+`configureRuntime({ operations: Object.values(OPERATIONS), client: defaultClient });\n`+`export { createRestClient, DEFAULT_API_ROOT, OPERATIONS };\n`+`export function configureMetaproject(options = {}) { return configureRuntime({ ...options, operations: options.operations ?? Object.values(OPERATIONS), client: options.client ?? defaultClient }); }\n`;}
 function indexEntrySource(tags){const imports=tags.map(tag=>`import './${tag}.js';`).join('\n');return`export * from './runtime.js';\n${imports}${imports?'\n':''}`;}
