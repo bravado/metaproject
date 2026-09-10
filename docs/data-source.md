@@ -155,15 +155,27 @@ element.refresh();
 
 Current `refresh()` requests runtime invalidation and therefore may cause other mounted queries to reconsider their cached value. Prefer normal mutation-driven invalidation when possible.
 
-## Default REST client
+## Default REST client and OpenAPI servers
 
-Static builds create a default REST client from `metaproject.yaml`:
+Static builds take the default endpoint from the first top-level OpenAPI `servers` entry:
 
 ```yaml
-api_root: /api
+servers:
+  - url: /api
+  - url: https://staging.example.test/api
 ```
 
-The client:
+Server variables use their OpenAPI defaults when creating the generated default runtime:
+
+```yaml
+servers:
+  - url: https://{environment}.example.test/api
+    variables:
+      environment:
+        default: staging
+```
+
+The REST client:
 
 - expands OpenAPI path parameters;
 - adds query parameters;
@@ -172,6 +184,22 @@ The client:
 - supports URL-encoded and native browser body types;
 - reads JSON responses based on `Content-Type`;
 - throws `RestClientError` for non-2xx HTTP responses.
+
+The endpoint is deliberately not duplicated in `metaproject.yaml`. Development tooling can select another declared OpenAPI server without changing component source.
+
+## OpenAPI security
+
+Core exposes helpers for interpreting `components.securitySchemes` plus root/operation `security` requirements. They support all OpenAPI Security Scheme Object types:
+
+- `apiKey` in `header`, `query`, or `cookie`;
+- `http`, including Basic, Bearer, and arbitrary declared HTTP schemes;
+- `oauth2`;
+- `openIdConnect`;
+- `mutualTLS`.
+
+Security Requirement Object semantics are preserved: alternative objects are OR choices; multiple schemes in one object are required together.
+
+Credentials are not part of the OpenAPI document. OAuth/OpenID Connect access tokens, API keys, passwords, certificates, and private keys are runtime inputs. Core's security helpers convert supplied credentials into request arguments or transport metadata; the hosting environment decides how credentials are acquired and where they are stored.
 
 ## Custom client
 
