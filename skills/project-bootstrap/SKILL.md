@@ -25,18 +25,20 @@ Canvas is optional development tooling, not the runtime architecture.
 
 1. Run `npx metaproject init` if the project is not initialized.
 2. Define the smallest browser-facing API needed for the first useful workflow.
-3. Add reusable schemas and stable operations to `openapi.yaml`.
-4. Give every operation/schema an `x-project-id` and every response body a small representative success example.
-5. Use the deterministic mutation tools when adding/updating modeled resources:
+3. Put API endpoints in the top-level OpenAPI `servers` list. The first server is the generated runtime default; additional servers are alternate deployments/tools targets.
+4. Describe authentication with standard OpenAPI `components.securitySchemes` and root/operation `security`. Never write credentials, tokens, passwords, certificates, or private keys into the spec.
+5. Add reusable schemas and stable operations to `openapi.yaml`.
+6. Give every operation/schema an `x-project-id` and every response body a small representative success example.
+7. Use the deterministic mutation tools when adding/updating modeled resources:
 
 ```bash
 npx metaproject openapi upsert-entity --input /tmp/entity.json
 npx metaproject openapi upsert-operation --input /tmp/operation.json
 ```
 
-6. Run `npx metaproject openapi check-examples`.
-7. Follow `node_modules/metaproject/skills/component-creator/SKILL.md`.
-8. Run:
+8. Run `npx metaproject openapi check-examples`.
+9. Follow `node_modules/metaproject/skills/component-creator/SKILL.md`.
+10. Run:
 
 ```bash
 npx metaproject check
@@ -46,6 +48,7 @@ npx metaproject build
 ## Rules
 
 - Design HTTP capabilities, not source-code methods.
+- Keep endpoint/deployment information in OpenAPI `servers`, not a separate Metaproject API-root setting.
 - Keep operation IDs stable and meaningful (`listUsers`, `getUser`, `updateUser`).
 - Prefer reusable schemas for objects shared by multiple operations.
 - Add examples that make components useful before a live backend exists.
