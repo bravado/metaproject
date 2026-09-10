@@ -36,12 +36,21 @@ Default `metaproject.yaml`:
 ```yaml
 version: 1
 name: Example
-api_root: /api
 openapi: openapi.yaml
 components:
   source: components
   output: public/components
 ```
+
+API endpoints belong to OpenAPI, not `metaproject.yaml`:
+
+```yaml
+servers:
+  - url: /api
+  - url: https://staging.example.test/api
+```
+
+The generated default runtime uses the first OpenAPI server. Development tools such as Canvas can expose all declared servers as selectable HTTP sources. OpenAPI server variables are supported through their declared defaults/values.
 
 The OpenAPI path and component directories are configurable.
 
@@ -160,6 +169,21 @@ Example:
 
 All matching sources share the HTTP/cache entry while each source keeps its own resource context. See the full [Core data-source documentation](docs/data-source.md).
 
+## OpenAPI servers and authentication
+
+OpenAPI is also the source of truth for API server and security metadata. Core exports browser-safe helpers for:
+
+- ordered top-level `servers` and server variables;
+- `components.securitySchemes` discovery;
+- root and operation-level `security` requirements;
+- OpenAPI OR/AND security requirement semantics;
+- API keys in headers, query parameters, or cookies;
+- HTTP authentication including Basic, Bearer, and other declared HTTP schemes;
+- OAuth 2.0 and OpenID Connect access tokens;
+- mutual TLS transport metadata.
+
+Authentication credentials are runtime data and must not be committed to `openapi.yaml` or `metaproject.yaml`. A host application can supply its own configured client; Canvas provides a development-only credential UI for its selected OpenAPI server. OAuth/OpenID Connect client registration is provider/application configuration rather than OpenAPI contract data, so Canvas accepts an acquired access token instead of storing client secrets in the project.
+
 ## Public Web Component contract
 
 Declare inputs with `<component-property>`:
@@ -233,6 +257,8 @@ api.js            # operation metadata
 manifest.json     # component metadata
 _chunks/...       # shared generated chunks when needed
 ```
+
+The default REST client uses the first resolved OpenAPI server. A host can replace it with `configureMetaproject({client})` when authentication, CSRF, tracing, application-specific request policy, or a different deployment endpoint requires a custom transport.
 
 Use the output directly from an application:
 
