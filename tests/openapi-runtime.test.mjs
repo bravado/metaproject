@@ -11,8 +11,9 @@ import {
 const openapi = {
   openapi:'3.1.0',
   servers:[
-    { url:'https://api.example.test/{version}', variables:{version:{default:'v1',enum:['v1','v2']}} },
-    { url:'https://staging.example.test' }
+    { url:'https://api.example.test/{version}', description:'Production', variables:{version:{default:'v1',enum:['v1','v2']}} },
+    { url:'https://staging.example.test', description:'Staging API', 'x-display-name':'Staging' },
+    { url:'https://fallback.example.test' }
   ],
   security:[{ apiKey:[], bearer:[] }, { oauth:['read'] }],
   components:{securitySchemes:{
@@ -27,9 +28,10 @@ const openapi = {
   }}
 };
 
-test('servers are ordered, labeled and resolve variables from defaults or overrides',()=>{
+test('servers are ordered, use display-name/description labels, and resolve variables',()=>{
   const servers=collectOpenApiServers(openapi);
-  assert.deepEqual(servers.map(server=>server.label),['Server 1','Server 2']);
+  assert.deepEqual(servers.map(server=>server.label),['Production','Staging','Server 3']);
+  assert.equal(servers[1].description,'Staging API');
   assert.equal(resolveOpenApiServerUrl(servers[0]),'https://api.example.test/v1');
   assert.equal(resolveOpenApiServerUrl(servers[0],{version:'v2'}),'https://api.example.test/v2');
   assert.equal(resolveOpenApiServerUrl(servers[1]),'https://staging.example.test');
