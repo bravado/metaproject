@@ -19,19 +19,43 @@ components/
 
 Generated output is created later under the configured `components.output` directory.
 
-## 2. Configure the API root
+## 2. Configure API servers in OpenAPI
+
+`metaproject.yaml` identifies the contract and component directories:
 
 ```yaml
 version: 1
 name: Example
-api_root: /api
 openapi: openapi.yaml
 components:
   source: components
   output: public/components
 ```
 
-`api_root` is the base URL used by the generated default REST client. Your OpenAPI paths remain API-relative, for example `/users` and `/users/{id}`.
+The API endpoint belongs to `openapi.yaml`:
+
+```yaml
+openapi: 3.1.0
+info:
+  title: Example API
+  version: 0.0.0
+servers:
+  - url: /api
+  - url: https://staging.example.test/api
+```
+
+The generated default REST runtime uses the first OpenAPI server. Tools may expose all top-level servers as alternate development targets. OpenAPI server variables can be used normally:
+
+```yaml
+servers:
+  - url: https://{environment}.example.test/api
+    variables:
+      environment:
+        default: staging
+        enum: [staging, production]
+```
+
+`api_root` is not a Metaproject configuration field; keep endpoint information in OpenAPI so every consumer sees the same API contract.
 
 ## 3. Model the API before the component
 
@@ -42,6 +66,8 @@ openapi: 3.1.0
 info:
   title: Example API
   version: 0.0.0
+servers:
+  - url: /api
 paths:
   /users:
     get:
@@ -78,6 +104,8 @@ For deterministic agent/tool updates you can use:
 npx metaproject openapi upsert-entity --input entity.json
 npx metaproject openapi upsert-operation --input operation.json
 ```
+
+If the API requires authentication, describe it with standard OpenAPI `components.securitySchemes` and `security`. Keep credentials out of the specification; they are runtime/application configuration.
 
 ## 4. Create a component
 
@@ -141,7 +169,7 @@ public/components/
 </script>
 ```
 
-The component is a browser custom element. It can be hosted by your existing frontend framework or by plain HTML.
+The component is a browser custom element. It can be hosted by your existing frontend framework or by plain HTML. Host applications can replace the generated default REST client with `configureMetaproject({client})` when they need application-specific authentication/session behavior.
 
 ## Agent workflow
 
