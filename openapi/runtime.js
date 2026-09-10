@@ -16,11 +16,13 @@ export function collectOpenApiServers(openapi = {}) {
   const source = Array.isArray(openapi.servers) && openapi.servers.length ? openapi.servers : [{ url:'/' }];
   return source.map((unresolved, index) => {
     const server = resolveLocalReference(openapi, unresolved) || {};
+    const description = String(server.description || '').trim();
+    const displayName = String(server['x-display-name'] || '').trim();
     return {
       index,
-      label:`Server ${index + 1}`,
+      label:displayName || description || `Server ${index + 1}`,
       url:String(server.url || '/'),
-      description:String(server.description || ''),
+      description,
       variables:Object.fromEntries(Object.entries(server.variables || {}).map(([name, variable]) => [name, {
         default:variable?.default,
         enum:Array.isArray(variable?.enum) ? [...variable.enum] : [],
