@@ -107,3 +107,12 @@ function structuredCloneSafe(value) {
 
 export { validateOpenApiExamples, assertOpenApiExamples } from './examples.js';
 export { buildOpenApiIndex, collectOperationSchemas, collectRefs } from './indexer.js';
+export {
+  OpenApiCredentialsError,
+  collectOpenApiServers,
+  resolveOpenApiServerUrl,
+  collectOpenApiSecuritySchemes,
+  openApiSecurityRequirements,
+  applyOpenApiSecurity,
+  findOpenApiOperation
+} from './runtime.js';
