@@ -1,9 +1,9 @@
 export function createDefaultMetaprojectSource({ name = 'Metaproject' } = {}) {
-  return `version: 1\nname: ${yamlScalar(name)}\napi_root: /api\nopenapi: openapi.yaml\ncomponents:\n  source: components\n  output: public/components\n`;
+  return `version: 1\nname: ${yamlScalar(name)}\nopenapi: openapi.yaml\ncomponents:\n  source: components\n  output: public/components\n`;
 }
 
 export function createDefaultOpenApiSource({ title = 'Metaproject API' } = {}) {
-  return `openapi: 3.1.0\ninfo:\n  title: ${yamlScalar(title)}\n  version: 0.0.0\npaths: {}\ncomponents:\n  schemas: {}\n`;
+  return `openapi: 3.1.0\ninfo:\n  title: ${yamlScalar(title)}\n  version: 0.0.0\nservers:\n  - url: /api\npaths: {}\ncomponents:\n  schemas: {}\n`;
 }
 
 export const DEFAULT_METAPROJECT_SOURCE = createDefaultMetaprojectSource();
