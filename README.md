@@ -231,6 +231,21 @@ npx metaproject import-openapi SOURCE
 
 Every modeled operation should have a stable `operationId` and `x-project-id`; reusable schemas should have stable `x-project-id` values. Operations with response bodies should have small representative success examples.
 
+## Call OpenAPI operations from the CLI
+
+The CLI can execute modeled operations directly by `operationId` using the same operation metadata and REST client semantics as generated components:
+
+```bash
+npx metaproject api list
+npx metaproject api show getUser
+npx metaproject api call getUser --id 123
+npx metaproject api call createUser --body @user.json
+```
+
+Path, query, and header parameters become `--PARAM` flags. Use `-H` for arbitrary headers and `--server` to override the first OpenAPI server. Relative OpenAPI server URLs require an absolute `--server` value when called from the CLI.
+
+See [Calling OpenAPI operations from the CLI](docs/api-cli.md).
+
 ## Validate the complete project
 
 ```bash
@@ -287,4 +302,5 @@ Core ships focused skills instead of one monolithic workflow:
 - [Getting started from scratch](docs/getting-started.md)
 - [Adopting an existing application](docs/adopting-existing-application.md)
 - [Core data-source](docs/data-source.md)
+- [Calling OpenAPI operations from the CLI](docs/api-cli.md)
 - [Using generated components](docs/using-components.md)

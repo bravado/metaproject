@@ -23,6 +23,7 @@ test('package ships focused architecture, adoption, runtime, and host integratio
   const existing=await read('docs/adopting-existing-application.md');
   const dataSource=await read('docs/data-source.md');
   const using=await read('docs/using-components.md');
+  const apiCli=await read('docs/api-cli.md');
   assert.match(architecture,/OpenAPI is the API boundary/i);
   assert.match(scratch,/Getting started from scratch/);
   assert.match(scratch,/upsert-schema/);
@@ -37,4 +38,7 @@ test('package ships focused architecture, adoption, runtime, and host integratio
   assert.match(using,/Lit/);
   assert.match(using,/React, Vue, Svelte/);
   assert.match(using,/data-action/);
+  assert.match(apiCli,/api call/);
+  assert.match(apiCli,/operationId/);
+  assert.match(apiCli,/--server/);
 });

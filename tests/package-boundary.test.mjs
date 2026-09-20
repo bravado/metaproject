@@ -8,9 +8,11 @@ test('runtime and project tooling subpaths point at canonical Core implementatio
   assert.equal(pkg.exports['./data-source'],'./data-source/index.js');
   assert.equal(pkg.exports['./compiler'],'./compiler/index.js');
   assert.equal(pkg.exports['./operations'],'./operations/index.js');
+  assert.equal(pkg.exports['./api'],'./api/index.js');
   assert.equal(pkg.exports['./openapi'],'./openapi/index.js');
   assert.equal(pkg.exports['./project'],'./project/index.js');
   assert.equal(pkg.exports['./project/check'],'./project/check.js');
+  assert.ok(pkg.files.includes('api/'));
   assert.ok(pkg.files.includes('docs/'));
   assert.ok(pkg.files.includes('skills/'));
 });

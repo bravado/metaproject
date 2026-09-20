@@ -30,6 +30,9 @@ test('CLI help exposes adoption and build tools',()=>{
   assert.match(help.stdout,/local YAML\/JSON file/);
   assert.match(help.stdout,/upsert-operation/);
   assert.match(help.stdout,/upsert-schema/);
+  assert.match(help.stdout,/metaproject api list/);
+  assert.match(help.stdout,/metaproject api show OPERATION/);
+  assert.match(help.stdout,/metaproject api call OPERATION/);
 });
 
 

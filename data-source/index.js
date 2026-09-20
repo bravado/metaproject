@@ -49,10 +49,8 @@ export function createRestClient(options = {}) {
     invoke(operation, args = {}) {
       validateOperation(operation, args);
       const path = expandPath(operation.path, args.path || {}, operation.operationId);
-      const method = String(operation.method || 'GET').toLowerCase();
-      const invoke = client[method];
-      if (typeof invoke !== 'function') throw new Error(`Unsupported REST method: ${operation.method}`);
-      return invoke(path, {
+      const method = String(operation.method || 'GET').toUpperCase();
+      return request(method, path, {
         query:args.query,
         headers:args.headers,
         body:args.body,

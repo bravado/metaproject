@@ -40,6 +40,10 @@ try {
     console.log(`  Source:     ${result.source}`);
     console.log(`  Operations: ${result.operations}`);
     console.log(`  Schemas:    ${result.schemas}`);
+  } else if (command === 'api') {
+    const { runApiCli } = await import('../api/index.js');
+    const result = await runApiCli(argv);
+    if (result?.exitCode) process.exitCode = result.exitCode;
   } else if (command === 'openapi') {
     const subcommand = argv.shift();
     if (subcommand === 'check-examples') {
@@ -77,8 +81,8 @@ try {
     if (!['help','--help','-h'].includes(command)) process.exitCode = 1;
   }
 } catch (error) {
-  console.error(error?.stack || error?.message || String(error));
-  process.exitCode = 1;
+  console.error(error?.name === 'ApiCliError' ? error.message : (error?.stack || error?.message || String(error)));
+  process.exitCode = Number.isInteger(error?.exitCode) ? error.exitCode : 1;
 }
 
 function parseInitArgs(args) {
@@ -161,5 +165,5 @@ function printInitResult(result) {
 }
 
 function printHelp() {
-  console.log(`Metaproject\n\nUsage:\n  metaproject init [project-root] [--name NAME] [--no-agents]\n  metaproject check [project-root]\n  metaproject build [project-root] [--minify] [--sourcemap]\n  metaproject build-api [project-root]\n  metaproject import-openapi SOURCE [project-root] [--force]\n  metaproject openapi check-examples [project-root]\n  metaproject openapi upsert-operation --input FILE [project-root]\n  metaproject openapi upsert-schema --input FILE [project-root]\n\nDeprecated alias:\n  metaproject openapi upsert-entity --input FILE [project-root]\n  metaproject --version\n\nSOURCE may be a local YAML/JSON file, file:// URL, or HTTP(S) URL.\n\nTypical setup:\n  npm install --save-dev metaproject\n  npx metaproject init\n  npx metaproject check\n  npx metaproject build\n`);
+  console.log(`Metaproject\n\nUsage:\n  metaproject init [project-root] [--name NAME] [--no-agents]\n  metaproject check [project-root]\n  metaproject build [project-root] [--minify] [--sourcemap]\n  metaproject build-api [project-root]\n  metaproject import-openapi SOURCE [project-root] [--force]\n  metaproject api list [project-root]\n  metaproject api show OPERATION [project-root]\n  metaproject api call OPERATION [project-root] [parameters/options]\n  metaproject openapi check-examples [project-root]\n  metaproject openapi upsert-operation --input FILE [project-root]\n  metaproject openapi upsert-schema --input FILE [project-root]\n\nDeprecated alias:\n  metaproject openapi upsert-entity --input FILE [project-root]\n  metaproject --version\n\nSOURCE may be a local YAML/JSON file, file:// URL, or HTTP(S) URL.\n\nTypical setup:\n  npm install --save-dev metaproject\n  npx metaproject init\n  npx metaproject check\n  npx metaproject build\n`);
 }
