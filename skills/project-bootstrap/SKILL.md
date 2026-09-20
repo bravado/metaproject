@@ -32,7 +32,7 @@ Canvas is optional development tooling, not the runtime architecture.
 7. Use the deterministic mutation tools when adding/updating modeled resources:
 
 ```bash
-npx metaproject openapi upsert-entity --input /tmp/entity.json
+npx metaproject openapi upsert-schema --input /tmp/schema.json
 npx metaproject openapi upsert-operation --input /tmp/operation.json
 ```
 

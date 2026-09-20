@@ -39,7 +39,7 @@ try {
     console.log(`Imported OpenAPI spec into ${result.path}`);
     console.log(`  Source:     ${result.source}`);
     console.log(`  Operations: ${result.operations}`);
-    console.log(`  Entities:   ${result.entities}`);
+    console.log(`  Schemas:    ${result.schemas}`);
   } else if (command === 'openapi') {
     const subcommand = argv.shift();
     if (subcommand === 'check-examples') {
@@ -54,17 +54,18 @@ try {
       }
       console.log('OpenAPI examples are complete.');
     } else {
-      const { upsertProjectOperation, upsertProjectEntity } = await import('../openapi/project-tools.js');
+      const { upsertProjectOperation, upsertProjectSchema } = await import('../openapi/project-tools.js');
       const { root, input } = parseOpenApiMutationArgs(argv);
       const values = readJsonInput(input);
       if (subcommand === 'upsert-operation') {
         const result = upsertProjectOperation({ root, values });
         console.log(`${result.created ? 'Created' : 'Updated'} ${result.method} ${result.operationPath} (${result.operationId})`);
-      } else if (subcommand === 'upsert-entity') {
-        const result = upsertProjectEntity({ root, values });
-        console.log(`${result.created ? 'Created' : 'Updated'} Entity ${result.name}`);
+      } else if (subcommand === 'upsert-schema' || subcommand === 'upsert-entity') {
+        if (subcommand === 'upsert-entity') console.warn('metaproject openapi upsert-entity is deprecated; use upsert-schema instead.');
+        const result = upsertProjectSchema({ root, values });
+        console.log(`${result.created ? 'Created' : 'Updated'} Schema ${result.name}`);
       } else {
-        throw new Error('Usage: metaproject openapi check-examples [project-root] | upsert-operation|upsert-entity --input FILE [project-root]');
+        throw new Error('Usage: metaproject openapi check-examples [project-root] | upsert-operation|upsert-schema --input FILE [project-root]');
       }
     }
   } else if (command === '--version' || command === '-v' || command === 'version') {
@@ -160,5 +161,5 @@ function printInitResult(result) {
 }
 
 function printHelp() {
-  console.log(`Metaproject\n\nUsage:\n  metaproject init [project-root] [--name NAME] [--no-agents]\n  metaproject check [project-root]\n  metaproject build [project-root] [--minify] [--sourcemap]\n  metaproject build-api [project-root]\n  metaproject import-openapi SOURCE [project-root] [--force]\n  metaproject openapi check-examples [project-root]\n  metaproject openapi upsert-operation --input FILE [project-root]\n  metaproject openapi upsert-entity --input FILE [project-root]\n  metaproject --version\n\nSOURCE may be a local YAML/JSON file, file:// URL, or HTTP(S) URL.\n\nTypical setup:\n  npm install --save-dev metaproject\n  npx metaproject init\n  npx metaproject check\n  npx metaproject build\n`);
+  console.log(`Metaproject\n\nUsage:\n  metaproject init [project-root] [--name NAME] [--no-agents]\n  metaproject check [project-root]\n  metaproject build [project-root] [--minify] [--sourcemap]\n  metaproject build-api [project-root]\n  metaproject import-openapi SOURCE [project-root] [--force]\n  metaproject openapi check-examples [project-root]\n  metaproject openapi upsert-operation --input FILE [project-root]\n  metaproject openapi upsert-schema --input FILE [project-root]\n\nDeprecated alias:\n  metaproject openapi upsert-entity --input FILE [project-root]\n  metaproject --version\n\nSOURCE may be a local YAML/JSON file, file:// URL, or HTTP(S) URL.\n\nTypical setup:\n  npm install --save-dev metaproject\n  npx metaproject init\n  npx metaproject check\n  npx metaproject build\n`);
 }

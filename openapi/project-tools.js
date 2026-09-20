@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { createDefaultOpenApiSource } from '../project/index.js';
-import { mutateOperationDocument, mutateEntityDocument } from './mutation-model.js';
+import { mutateOperationDocument, mutateSchemaDocument } from './mutation-model.js';
 
 const require = createRequire(import.meta.url);
 const METHODS = ['get','put','post','delete','options','head','patch','trace'];
@@ -35,13 +35,13 @@ export function upsertProjectOperation({ root = process.cwd(), values }) {
   return { path:'openapi.yaml', operationId:next.operationId, method:String(next.method).toUpperCase(), operationPath:next.path, id, created:!existing };
 }
 
-/** Deterministically create or update one local OpenAPI schema/entity. */
-export function upsertProjectEntity({ root = process.cwd(), values }) {
+/** Deterministically create or update one local OpenAPI schema. */
+export function upsertProjectSchema({ root = process.cwd(), values }) {
   root = path.resolve(root);
   const file = path.join(root, 'openapi.yaml');
   const source = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : createDefaultOpenApiSource({ title:'Metaproject API' });
   const document = yaml().parse(source) || {};
-  if (!values?.name) throw new Error('Entity input requires name.');
+  if (!values?.name) throw new Error('Schema input requires name.');
   const previousName = values.previousName || values.name;
   const existing = document?.components?.schemas?.[previousName];
   const id = values.id || existing?.['x-project-id'] || randomUUID();
@@ -51,7 +51,7 @@ export function upsertProjectEntity({ root = process.cwd(), values }) {
     required: has(values,'required') ? values.required : existing?.required || [],
     id
   };
-  mutateEntityDocument(document, existing ? previousName : null, next);
+  mutateSchemaDocument(document, existing ? previousName : null, next);
   fs.writeFileSync(file, yaml().stringify(document));
   return { path:'openapi.yaml', name:next.name, id, created:!existing };
 }
@@ -99,7 +99,7 @@ export function normalizeImportedOpenApi(document) {
 /**
  * Import an existing bundled OpenAPI 3.x document from either a local file or
  * an HTTP(S) URL. The source is copied into the Metaproject-owned openapi.yaml
- * and normalized with stable operation/entity IDs.
+ * and normalized with stable operation/schema IDs.
  */
 export async function importProjectOpenApi({ root = process.cwd(), source, url, force = false, fetchImpl = globalThis.fetch } = {}) {
   const requested=source ?? url;
@@ -121,7 +121,7 @@ export async function importProjectOpenApi({ root = process.cwd(), source, url, 
     source:loaded.label,
     url:loaded.kind==='url'?loaded.label:null,
     operations:countOperations(document),
-    entities:Object.keys(document.components.schemas || {}).length
+    schemas:Object.keys(document.components.schemas || {}).length
   };
 }
 

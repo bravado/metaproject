@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mutateOperationDocument, mutateEntityDocument } from '../openapi/mutation-model.js';
+import { mutateOperationDocument, mutateSchemaDocument } from '../openapi/mutation-model.js';
 
 const operation = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -55,9 +55,9 @@ test('scalar path items fail with a clear mapping error', () => {
   assert.throws(() => mutateOperationDocument(document, null, operation), /paths\.\/new-resource must be a YAML mapping/);
 });
 
-test('entity mutation creates components.schemas', () => {
+test('schema mutation creates components.schemas', () => {
   const document = { openapi: '3.1.0', info: { title: 'Empty', version: '0.0.0' }, paths: {} };
-  mutateEntityDocument(document, null, {
+  mutateSchemaDocument(document, null, {
     id: '22222222-2222-4222-8222-222222222222',
     name: 'Voucher', properties: { id: { type: 'integer' } }, required: ['id']
   });

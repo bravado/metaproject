@@ -7,7 +7,7 @@ const METHODS = ['get','put','post','delete','options','head','patch','trace'];
  */
 export function buildOpenApiIndex(document) {
   const operations = [];
-  const entities = [];
+  const schemas = [];
   const relationships = [];
   const diagnostics = [];
   const opIds = new Set();
@@ -36,20 +36,20 @@ export function buildOpenApiIndex(document) {
       if (opIds.has(operationId)) diagnostics.push({severity:'error',code:'duplicate-operation-id',resource:projectId,message:`Duplicate operationId: ${operationId}`});
       opIds.add(operationId);
       trackProjectId(projectId,projectIds,diagnostics);
-      for (const target of collectOperationSchemas(operation)) relationships.push({type:'uses',source:projectId,targetKind:'entityName',target,origin:'openapi'});
+      for (const target of collectOperationSchemas(operation)) relationships.push({type:'uses',source:projectId,targetKind:'schemaName',target,origin:'openapi'});
     }
   }
 
   for (const [name, schema] of Object.entries(document?.components?.schemas || {})) {
     if (!schema || typeof schema !== 'object') continue;
-    const projectId = schema['x-project-id'] || `missing:entity:${name}`;
-    entities.push({kind:'entity',id:projectId,name,schema,sourceRef:schema['x-source-ref'] || null});
-    if (!schema['x-project-id']) diagnostics.push({severity:'error',code:'missing-project-id',resource:projectId,message:`Entity ${name} is missing x-project-id.`});
+    const projectId = schema['x-project-id'] || `missing:schema:${name}`;
+    schemas.push({kind:'schema',id:projectId,name,schema,sourceRef:schema['x-source-ref'] || null});
+    if (!schema['x-project-id']) diagnostics.push({severity:'error',code:'missing-project-id',resource:projectId,message:`Schema ${name} is missing x-project-id.`});
     trackProjectId(projectId,projectIds,diagnostics);
-    for (const target of collectRefs(schema)) relationships.push({type:'references',source:projectId,targetKind:'entityName',target,origin:'openapi'});
+    for (const target of collectRefs(schema)) relationships.push({type:'references',source:projectId,targetKind:'schemaName',target,origin:'openapi'});
   }
 
-  return {operations,entities,relationships:dedupe(relationships),diagnostics};
+  return {operations,schemas,relationships:dedupe(relationships),diagnostics};
 }
 
 export function collectOperationSchemas(operation) {

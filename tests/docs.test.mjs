@@ -11,6 +11,8 @@ test('README presents Metaproject as API-to-Web-Components glue and covers all a
   assert.match(source,/Existing application with an OpenAPI contract/);
   assert.match(source,/Existing application without a sufficient API spec/);
   assert.match(source,/metaproject check/);
+  assert.match(source,/upsert-schema/);
+  assert.doesNotMatch(source,/upsert-entity/);
   assert.match(source,/Core data-source/);
   assert.match(source,/Canvas is development tooling/i);
 });
@@ -23,6 +25,8 @@ test('package ships focused architecture, adoption, runtime, and host integratio
   const using=await read('docs/using-components.md');
   assert.match(architecture,/OpenAPI is the API boundary/i);
   assert.match(scratch,/Getting started from scratch/);
+  assert.match(scratch,/upsert-schema/);
+  assert.doesNotMatch(scratch,/upsert-entity/);
   assert.match(existing,/Add Metaproject to an existing application/);
   assert.match(existing,/import-openapi/);
   assert.match(dataSource,/Shared runtime and cache/);

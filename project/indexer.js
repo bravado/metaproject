@@ -111,7 +111,7 @@ export function buildProjectIndex({ files, openapi, project = {}, componentSourc
   }
 
   const opByOperationId = new Map(apiIndex.operations.map(value => [value.operationId,value]));
-  const entityByName = new Map(apiIndex.entities.map(value => [value.name,value]));
+  const schemaByName = new Map(apiIndex.schemas.map(value => [value.name,value]));
   const relationships = [];
   for (const relation of rawRelationships) {
     let target = relation.target;
@@ -119,9 +119,9 @@ export function buildProjectIndex({ files, openapi, project = {}, componentSourc
       const resource = opByOperationId.get(relation.target);
       if (!resource) { diagnostics.push({severity:'error',code:'unknown-operation',resource:relation.source,sourcePath:relation.sourcePath,editorTab:relation.editorTab,message:`Unknown operation ${relation.target}.`}); continue; }
       target = resource.id;
-    } else if (relation.targetKind === 'entityName') {
-      const resource = entityByName.get(relation.target);
-      if (!resource) { diagnostics.push({severity:'error',code:'unknown-entity',resource:relation.source,sourcePath:relation.sourcePath,editorTab:relation.editorTab,message:`Unknown Entity ${relation.target}.`}); continue; }
+    } else if (relation.targetKind === 'schemaName') {
+      const resource = schemaByName.get(relation.target);
+      if (!resource) { diagnostics.push({severity:'error',code:'unknown-schema',resource:relation.source,sourcePath:relation.sourcePath,editorTab:relation.editorTab,message:`Unknown schema ${relation.target}.`}); continue; }
       target = resource.id;
     } else if (relation.targetKind === 'componentTag') {
       const resource = componentByTag.get(relation.target);
@@ -137,9 +137,9 @@ export function buildProjectIndex({ files, openapi, project = {}, componentSourc
   return {
     components,
     operations:apiIndex.operations,
-    entities:apiIndex.entities,
+    schemas:apiIndex.schemas,
     views,
-    resources:[...components,...apiIndex.operations,...apiIndex.entities],
+    resources:[...components,...apiIndex.operations,...apiIndex.schemas],
     relationships:dedupe(relationships),
     diagnostics
   };

@@ -90,7 +90,7 @@ paths:
 components:
   schemas:
     User:
-      x-project-id: entity-user
+      x-project-id: schema-user
       type: object
       properties:
         id: { type: integer }
@@ -101,7 +101,7 @@ components:
 For deterministic agent/tool updates you can use:
 
 ```bash
-npx metaproject openapi upsert-entity --input entity.json
+npx metaproject openapi upsert-schema --input schema.json
 npx metaproject openapi upsert-operation --input operation.json
 ```
 

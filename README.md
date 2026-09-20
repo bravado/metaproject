@@ -222,7 +222,7 @@ Metaproject keeps the API contract deterministic and useful for development prev
 npx metaproject openapi check-examples
 
 # create/update modeled resources from JSON input
-npx metaproject openapi upsert-entity --input entity.json
+npx metaproject openapi upsert-schema --input schema.json
 npx metaproject openapi upsert-operation --input operation.json
 
 # import an existing bundled YAML/JSON contract

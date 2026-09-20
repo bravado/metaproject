@@ -36,7 +36,7 @@ export function mutateOperationDocument(document, existing, values) {
   return root;
 }
 
-export function mutateEntityDocument(document, existingName, values) {
+export function mutateSchemaDocument(document, existingName, values) {
   const root = requireObject(document, 'OpenAPI document root');
   const components = ensureObjectProperty(root, 'components', 'OpenAPI components');
   const schemas = ensureObjectProperty(components, 'schemas', 'OpenAPI components.schemas');

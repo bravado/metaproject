@@ -48,7 +48,7 @@ Ignore dependencies, caches, generated component output, uploads, and unrelated 
 5. Use deterministic mutation commands rather than fragile YAML surgery when practical:
 
 ```bash
-npx metaproject openapi upsert-entity --input /tmp/entity.json
+npx metaproject openapi upsert-schema --input /tmp/schema.json
 npx metaproject openapi upsert-operation --input /tmp/operation.json
 ```
 

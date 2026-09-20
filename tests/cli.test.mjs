@@ -29,6 +29,27 @@ test('CLI help exposes adoption and build tools',()=>{
   assert.match(help.stdout,/import-openapi SOURCE/);
   assert.match(help.stdout,/local YAML\/JSON file/);
   assert.match(help.stdout,/upsert-operation/);
+  assert.match(help.stdout,/upsert-schema/);
+});
+
+
+test('CLI uses schema terminology and keeps upsert-entity as a deprecated alias',()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'metaproject-cli-schema-'));
+  const schemaInput=path.join(root,'schema.json');
+  try {
+    fs.writeFileSync(schemaInput,JSON.stringify({name:'User',properties:{id:{type:'integer'}},required:['id']}));
+    const init=spawnSync(process.execPath,[bin,'init',root],{encoding:'utf8'});
+    assert.equal(init.status,0,init.stderr);
+    const upsert=spawnSync(process.execPath,[bin,'openapi','upsert-schema','--input',schemaInput,root],{encoding:'utf8'});
+    assert.equal(upsert.status,0,upsert.stderr);
+    assert.match(upsert.stdout,/Created Schema User/);
+    const legacy=spawnSync(process.execPath,[bin,'openapi','upsert-entity','--input',schemaInput,root],{encoding:'utf8'});
+    assert.equal(legacy.status,0,legacy.stderr);
+    assert.match(legacy.stderr,/deprecated; use upsert-schema instead/);
+    assert.match(legacy.stdout,/Updated Schema User/);
+  } finally {
+    fs.rmSync(root,{recursive:true,force:true});
+  }
 });
 
 test('CLI exposes package version',()=>{

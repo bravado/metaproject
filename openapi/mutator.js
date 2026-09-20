@@ -1,6 +1,6 @@
 import { parse, stringify } from 'yaml';
 import { DEFAULT_OPENAPI_SOURCE } from '../project/index.js';
-import { mutateOperationDocument, mutateEntityDocument } from './mutation-model.js';
+import { mutateOperationDocument, mutateSchemaDocument } from './mutation-model.js';
 
 /**
  * YAML adapter for structured OpenAPI editing.
@@ -15,9 +15,9 @@ export function upsertOperationYaml(source, existing, values) {
   return stringify(document);
 }
 
-export function upsertEntityYaml(source, existingName, values) {
+export function upsertSchemaYaml(source, existingName, values) {
   const document = parseOpenApiYaml(source);
-  mutateEntityDocument(document, existingName, values);
+  mutateSchemaDocument(document, existingName, values);
   return stringify(document);
 }
 

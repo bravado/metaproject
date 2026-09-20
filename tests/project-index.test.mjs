@@ -9,7 +9,7 @@ const openapi={
     '/users':{get:{operationId:'listUsers','x-project-id':'op-list',responses:{'200':{description:'ok',content:{'application/json':{schema:{type:'array',items:{$ref:'#/components/schemas/User'}},example:[{id:1}]}}}}}},
     '/users/{id}':{get:{operationId:'getUser','x-project-id':'op-get',parameters:[{name:'id',in:'path',required:true,schema:{type:'integer'}}],responses:{'200':{description:'ok',content:{'application/json':{schema:{$ref:'#/components/schemas/User'},example:{id:1}}}}}}}
   },
-  components:{schemas:{User:{'x-project-id':'entity-user',type:'object',properties:{id:{type:'integer'}}}}}
+  components:{schemas:{User:{'x-project-id':'schema-user',type:'object',properties:{id:{type:'integer'}}}}}
 };
 
 const files={
@@ -23,10 +23,10 @@ test('Core indexes configured component source, OpenAPI resources, and relations
   const index=buildProjectIndex({files,openapi,project});
   assert.deepEqual(index.components.map(value=>value.tag).sort(),['user-detail','user-list']);
   assert.deepEqual(index.operations.map(value=>value.operationId).sort(),['getUser','listUsers']);
-  assert.deepEqual(index.entities.map(value=>value.name),['User']);
+  assert.deepEqual(index.schemas.map(value=>value.name),['User']);
   assert.ok(index.relationships.some(value=>value.source==='user-list'&&value.target==='op-list'&&value.type==='calls'));
   assert.ok(index.relationships.some(value=>value.source==='user-detail'&&value.target==='op-get'&&value.type==='calls'));
-  assert.ok(index.relationships.some(value=>value.source==='op-list'&&value.target==='entity-user'&&value.type==='uses'));
+  assert.ok(index.relationships.some(value=>value.source==='op-list'&&value.target==='schema-user'&&value.type==='uses'));
   assert.equal(index.diagnostics.filter(value=>value.severity==='error').length,0);
 });
 

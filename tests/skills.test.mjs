@@ -23,6 +23,8 @@ test('skills cover new projects, existing code, existing OpenAPI, and component 
 test('application-analysis models OpenAPI first and hands off to component creation',()=>{
   assert.match(analysis,/browser-facing HTTP capabilities/i);
   assert.match(analysis,/openapi upsert-operation/);
+  assert.match(analysis,/openapi upsert-schema/);
+  assert.doesNotMatch([bootstrap,analysis].join('\n'),/upsert-entity/);
   assert.match(analysis,/openapi check-examples/);
   assert.match(analysis,/skills\/component-creator\/SKILL\.md/);
 });
