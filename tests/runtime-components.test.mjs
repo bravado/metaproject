@@ -16,8 +16,9 @@ test('canonical runtime registers only the lean data primitives',()=>{
 });
 
 test('data-source owns request/select, flat parameters, and generic data-operation execution',()=>{
-  assert.match(source,/\['request','select'\]/);
+  assert.match(source,/\['request','select','scope'\]/);
   assert.match(source,/invokeDataRequest\(operationId/);
+  assert.match(source,/getDataOperation\(operationId, this\.scope\)/);
   assert.match(source,/camelToKebab\(parameter\.name\)/);
   assert.match(source,/data-operation/);
   assert.match(source,/operationBodyFromResource\(operation,resource\)/);

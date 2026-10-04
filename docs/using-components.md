@@ -8,19 +8,28 @@ After:
 npx metaproject build
 ```
 
-the configured output directory (default `public/components/`) contains an `index.js` entry point plus the generated component/runtime modules.
+the configured output directory (default `public/components/`) contains a shared host runtime (`index.js`), standalone generated component bundles, and an `all.js` convenience entry.
 
 ## Plain HTML
 
-Load the generated entry point once:
+For all local components, load the convenience entry:
 
 ```html
-<script type="module" src="/components/index.js"></script>
-
+<script type="module" src="/components/all.js"></script>
 <user-list></user-list>
 ```
 
-The generated modules self-register their custom elements.
+For individually distributed components, load the host runtime first:
+
+```html
+<script type="module">
+  await import('/components/index.js');
+  await import('https://widgets.example.com/components/user-list.js');
+</script>
+<user-list></user-list>
+```
+
+Each generated component bundle self-registers its custom element. The host's `index.js` supplies the shared runtime; component bundles do not ship a second copy. See [Shared runtime and remote components](remote-components.md).
 
 A parameterized component can be used with normal HTML attributes:
 
@@ -71,7 +80,7 @@ No Metaproject-specific wrapper is required. Use the framework's normal custom-e
 
 - set primitive attributes or element properties;
 - listen for native CustomEvents;
-- load `/components/index.js` once in the browser.
+- load `/components/all.js` to register all local components, or load `/components/index.js` first followed by the individual component modules.
 
 A thin framework wrapper can be added when the framework benefits from typed props/events, but the generated custom element remains the actual runtime component.
 
@@ -198,7 +207,7 @@ Generated HTML-first components are Lit custom elements and their component CSS 
 
 ## Deployment
 
-Serve the generated output as static browser assets. `index.js` and any generated chunk directory must remain together exactly as produced by the build.
+Serve the generated output as static browser assets. The host serves `index.js`; individual components may be hosted independently on trusted origins with JavaScript module CORS support. Component bundles do not require sibling runtime files.
 
 A typical existing application workflow is:
 

@@ -70,3 +70,7 @@ Finish with:
 npx metaproject check
 npx metaproject build
 ```
+
+## Standalone component distribution
+
+Components share the host application's Metaproject runtime. Keep each component's HTML and helpers self-contained: a built `<tag>.js` must not assume a second runtime or depend on sibling build files. Use a unique project `scope` in `metaproject.yaml` when components may be hosted independently. The host loads `index.js` before any local or remote component bundles.

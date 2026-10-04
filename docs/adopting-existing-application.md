@@ -110,7 +110,7 @@ npx metaproject build
 Then include the generated browser entry point in the application layout:
 
 ```html
-<script type="module" src="/components/index.js"></script>
+<script type="module" src="/components/all.js"></script>
 ```
 
 and use generated custom elements in existing templates/pages:

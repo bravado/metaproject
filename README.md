@@ -262,25 +262,32 @@ Core exports its project/OpenAPI indexers so other tools can reuse consistent di
 npx metaproject build
 ```
 
-The build emits browser-native ESM under the configured output directory, including:
+The build emits a shared host runtime and independently loadable browser-native component bundles:
 
 ```text
-index.js          # import once; registers generated custom elements
-runtime.js        # default REST runtime/configuration
+index.js          # host runtime: load once, registers base elements
+runtime.js        # compatibility re-export of index.js
 api.js            # operation metadata
-<component>.js    # generated Web Components
-manifest.json     # component metadata
-_chunks/...       # shared generated chunks when needed
+<component>.js    # independently loadable component, without Core/Lit runtime
+all.js            # convenience entry: host runtime + all local components
+manifest.json     # component metadata and API scope
 ```
 
 The default REST client uses the first resolved OpenAPI server. A host can replace it with `configureMetaproject({client})` when authentication, CSRF, tracing, application-specific request policy, or a different deployment endpoint requires a custom transport.
 
-Use the output directly from an application:
+Use `all.js` to load the runtime and all local components, or load `index.js` once and import individual components (including remote components) afterward:
 
 ```html
-<script type="module" src="/components/index.js"></script>
+<script type="module">
+  await import('/components/index.js');
+  await import('/components/user-list.js');
+  await import('https://billing.example.com/components/invoice-list.js');
+</script>
 <user-list></user-list>
+<invoice-list></invoice-list>
 ```
+
+Every independently hosted project must set a unique `scope` in its `metaproject.yaml` (for example `scope: billing`). Distinct component tag names and matching Core runtime versions are also required. See [Shared runtime and remote components](docs/remote-components.md).
 
 Node.js/Metaproject is a development/build dependency; the host application does not need a Metaproject server at runtime.
 
@@ -304,3 +311,4 @@ Core ships focused skills instead of one monolithic workflow:
 - [Core data-source](docs/data-source.md)
 - [Calling OpenAPI operations from the CLI](docs/api-cli.md)
 - [Using generated components](docs/using-components.md)
+- [Shared runtime and remote components](docs/remote-components.md)

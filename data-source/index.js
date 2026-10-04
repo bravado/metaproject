@@ -70,43 +70,53 @@ const runtime = {
   subscribers:new Set(),
   epoch:0
 };
+const scopedRuntimes = new Map([['default', runtime]]);
+function stateFor(scope = 'default') {
+  scope = String(scope || 'default');
+  if (!scopedRuntimes.has(scope)) scopedRuntimes.set(scope, { operations:new Map(), client:null, cache:new Map(), subscribers:new Set(), epoch:0 });
+  return scopedRuntimes.get(scope);
+}
 const clientIds = new WeakMap();
 let nextClientId = 1;
 
-export function configureDataRuntime({ operations, client } = {}) {
+export function configureDataRuntime({ operations, client, scope = 'default' } = {}) {
+  const runtime = stateFor(scope);
   if (operations !== undefined) {
     const list = Array.isArray(operations) ? operations : Object.values(operations || {});
     runtime.operations = new Map(list.filter(Boolean).map(operation => [operation.operationId, operation]));
-    invalidateDataRuntime({ clear:true, reason:'operations' });
+    invalidateDataRuntime({ scope, clear:true, reason:'operations' });
   }
   if (client !== undefined) {
     runtime.client = client || null;
-    invalidateDataRuntime({ clear:true, reason:'client' });
+    invalidateDataRuntime({ scope, clear:true, reason:'client' });
   }
-  return getDataRuntime();
+  return getDataRuntime(scope);
 }
 
-export function getDataRuntime() {
+export function getDataRuntime(scope = 'default') {
+  const runtime = stateFor(scope);
   return Object.freeze({
     client:runtime.client,
     operations:Object.freeze(Object.fromEntries(runtime.operations)),
-    invoke:invokeDataRequest,
-    subscribe:subscribeDataRuntime,
-    invalidate:invalidateDataRuntime
+    invoke:(operationId, values, options = {}) => invokeDataRequest(operationId, values, { ...options, scope }),
+    subscribe:callback => subscribeDataRuntime(callback, { scope }),
+    invalidate:options => invalidateDataRuntime({ ...options, scope })
   });
 }
 
-export function getDataOperation(operationId) {
-  return runtime.operations.get(String(operationId || '')) || null;
+export function getDataOperation(operationId, scope = 'default') {
+  return stateFor(scope).operations.get(String(operationId || '')) || null;
 }
 
-export function subscribeDataRuntime(callback) {
+export function subscribeDataRuntime(callback, { scope = 'default' } = {}) {
+  const runtime = stateFor(scope);
   if (typeof callback !== 'function') return () => {};
   runtime.subscribers.add(callback);
   return () => runtime.subscribers.delete(callback);
 }
 
-export function invalidateDataRuntime({ clear = false, reason = 'mutation', operation = null, args = null } = {}) {
+export function invalidateDataRuntime({ scope = 'default', clear = false, reason = 'mutation', operation = null, args = null } = {}) {
+  const runtime = stateFor(scope);
   const scoped = !clear && operation && args && !['GET','HEAD'].includes(String(operation.method || '').toUpperCase());
   let invalidated = 0;
 
@@ -137,11 +147,13 @@ export function invalidateDataRuntime({ clear = false, reason = 'mutation', oper
     args:scoped ? invalidationArgs(args) : null,
     invalidated,
     epoch:runtime.epoch
-  });
+  }, runtime);
 }
 
 export function invokeDataRequest(operationId, values = {}, options = {}) {
-  const operation = getDataOperation(operationId);
+  const scope = options.scope || 'default';
+  const runtime = stateFor(scope);
+  const operation = getDataOperation(operationId, scope);
   if (!operation) throw new Error(`Unknown OpenAPI operation: ${operationId}`);
   const client = options.client || runtime.client;
   if (!client) throw new Error(`No client is configured for ${operation.operationId}.`);
@@ -149,7 +161,7 @@ export function invokeDataRequest(operationId, values = {}, options = {}) {
   const method = String(operation.method || 'GET').toUpperCase();
   const invoke = () => invokeClient(client, operation, args);
 
-  if (method !== 'GET' && method !== 'HEAD') return mutate(invoke, operation, args);
+  if (method !== 'GET' && method !== 'HEAD') return mutate(invoke, operation, args, runtime, scope);
 
   const key = `${clientKey(client)}:${operation.operationId}:${stableStringify({ path:args.path, query:args.query, headers:args.headers })}`;
   const existing = runtime.cache.get(key);
@@ -167,7 +179,7 @@ export function invokeDataRequest(operationId, values = {}, options = {}) {
   catch (error) {
     entry.status = 'error';
     entry.error = error;
-    notify({ type:'query-error', entry, error });
+    notify({ type:'query-error', entry, error }, runtime);
     throw error;
   }
 
@@ -175,7 +187,7 @@ export function invokeDataRequest(operationId, values = {}, options = {}) {
     entry.status = 'success';
     entry.value = result;
     entry.stale = entry.stale || requestEpoch !== runtime.epoch;
-    queueMicrotask(() => notify({ type:'query', entry }));
+    queueMicrotask(() => notify({ type:'query', entry }, runtime));
     return result;
   }
 
@@ -185,14 +197,14 @@ export function invokeDataRequest(operationId, values = {}, options = {}) {
       entry.value = value;
       entry.error = null;
       entry.stale = entry.stale || requestEpoch !== runtime.epoch;
-      notify({ type:'query', entry });
+      notify({ type:'query', entry }, runtime);
       return value;
     },
     error => {
       entry.status = 'error';
       entry.error = error;
       entry.stale = entry.stale || requestEpoch !== runtime.epoch;
-      notify({ type:'query-error', entry, error });
+      notify({ type:'query-error', entry, error }, runtime);
       throw error;
     }
   );
@@ -249,26 +261,26 @@ function invokeClient(client, operation, args) {
   });
 }
 
-function mutate(invoke, operation, args) {
+function mutate(invoke, operation, args, runtime, scope) {
   let result;
   try { result = invoke(); }
   catch (error) {
-    notify({ type:'mutation-error', operation, args, error });
+    notify({ type:'mutation-error', operation, args, error }, runtime);
     throw error;
   }
   if (!isPromiseLike(result)) {
-    invalidateDataRuntime({ reason:operation.operationId, operation, args });
-    notify({ type:'mutation', operation, args, value:result });
+    invalidateDataRuntime({ scope, reason:operation.operationId, operation, args });
+    notify({ type:'mutation', operation, args, value:result }, runtime);
     return result;
   }
   return Promise.resolve(result).then(
     value => {
-      invalidateDataRuntime({ reason:operation.operationId, operation, args });
-      notify({ type:'mutation', operation, args, value });
+      invalidateDataRuntime({ scope, reason:operation.operationId, operation, args });
+      notify({ type:'mutation', operation, args, value }, runtime);
       return value;
     },
     error => {
-      notify({ type:'mutation-error', operation, args, error });
+      notify({ type:'mutation-error', operation, args, error }, runtime);
       throw error;
     }
   );
@@ -308,7 +320,7 @@ function invalidationArgs(args) {
   return { path:{ ...(args?.path || {}) } };
 }
 
-function notify(event) {
+function notify(event, runtime) {
   for (const callback of [...runtime.subscribers]) {
     try { callback(event); }
     catch (error) { console.error('Metaproject data runtime subscriber failed', error); }

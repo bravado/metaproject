@@ -9,10 +9,11 @@ import { ResourceContextController, requestResourceContext } from './context.js'
 import { operationBodyFromResource } from './operation-body.js';
 
 export class DataSourceElement extends HTMLElement {
-  static get observedAttributes() { return ['request','select']; }
+  static get observedAttributes() { return ['request','select','scope']; }
   #resource;
   #schema;
   #client=null;
+  #explicitScope=null;
   #controller;
   #runtimeUnsubscribe=null;
   #observer=null;
@@ -29,7 +30,7 @@ export class DataSourceElement extends HTMLElement {
     this.addEventListener('click',this._onOperation);
     this.#runtimeUnsubscribe=subscribeDataRuntime(event=>{
       if (event?.type === 'invalidate' && this.request) this.load();
-    });
+    }, { scope:this.scope });
     this.#observer=new MutationObserver(records=>{
       if (records.some(record=>!['loading','error'].includes(record.attributeName))) this.load();
     });
@@ -44,7 +45,24 @@ export class DataSourceElement extends HTMLElement {
     this.removeEventListener('click',this._onOperation);
     this.#controller.hostDisconnected();
   }
-  attributeChangedCallback() { if (this.isConnected) this.load(); }
+  attributeChangedCallback(name) {
+    if (!this.isConnected) return;
+    if (name === 'scope') {
+      this.#runtimeUnsubscribe?.();
+      this.#runtimeUnsubscribe=subscribeDataRuntime(event=>{ if (event?.type === 'invalidate' && this.request) this.load(); }, { scope:this.scope });
+    }
+    this.load();
+  }
+  get scope() {
+    if (this.#explicitScope) return this.#explicitScope;
+    if (this.getAttribute('scope')) return this.getAttribute('scope');
+    const host = this.getRootNode()?.host;
+    return host?.metaprojectScope || host?.getAttribute?.('scope') || 'default';
+  }
+  set scope(value) {
+    this.#explicitScope = value == null ? null : String(value);
+    if (this.isConnected) { this.#runtimeUnsubscribe?.(); this.#runtimeUnsubscribe=subscribeDataRuntime(event=>{ if (event?.type === 'invalidate' && this.request) this.load(); }, { scope:this.scope }); this.load(); }
+  }
   get request() { return this.getAttribute('request') || ''; }
   set request(value) { value == null ? this.removeAttribute('request') : this.setAttribute('request',String(value)); }
   get select() { return this.getAttribute('select') || ''; }
@@ -53,18 +71,18 @@ export class DataSourceElement extends HTMLElement {
   set client(value) { this.#client=value || null; if (this.isConnected) this.load(); }
   get resource() { return this.#resource; }
   get schema() { return this.#schema; }
-  refresh() { invalidateDataRuntime({reason:'refresh'}); }
+  refresh() { invalidateDataRuntime({scope:this.scope,reason:'refresh'}); }
 
   load() {
     const operationId=this.request;
     if (!operationId || !this.isConnected) return this.#resource;
-    const operation=getDataOperation(operationId);
+    const operation=getDataOperation(operationId, this.scope);
     if (!operation) return this.#fail(new Error(`Unknown OpenAPI operation: ${operationId}`));
     if (!['GET','HEAD'].includes(String(operation.method).toUpperCase())) {
       return this.#fail(new Error(`<data-source request="${operationId}"> must reference a GET/HEAD operation.`));
     }
     let result;
-    try { result=invokeDataRequest(operationId,this.#parameters(operation),{client:this.#client || undefined}); }
+    try { result=invokeDataRequest(operationId,this.#parameters(operation),{scope:this.scope,client:this.#client || undefined}); }
     catch (error) { return this.#fail(error); }
     const version=++this.#version;
     if (isPromiseLike(result)) {
@@ -115,7 +133,7 @@ export class DataSourceElement extends HTMLElement {
     if (nearest !== this) return;
     const operationId=trigger.getAttribute('data-operation')?.trim();
     if (!operationId) return;
-    const operation=getDataOperation(operationId);
+    const operation=getDataOperation(operationId, this.scope);
     if (!operation) return this.#fail(new Error(`Unknown OpenAPI operation: ${operationId}`));
 
     event.preventDefault();
@@ -130,7 +148,7 @@ export class DataSourceElement extends HTMLElement {
     let result;
     try {
       result=invokeDataRequest(operationId,this.#parameters(operation,resource),{
-        client:this.#client || undefined,
+        scope:this.scope,client:this.#client || undefined,
         body:operationBodyFromResource(operation,resource)
       });
     } catch (error) { return this.#fail(error); }

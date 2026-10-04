@@ -65,7 +65,7 @@ security:
 
 The generated default REST client uses the first resolved top-level OpenAPI server. Credentials never belong in either project file; hosts and development tools supply them at runtime.
 
-The OpenAPI path and component source/output directories are configurable.
+The OpenAPI path and component source/output directories are configurable. Define a unique `scope` for every independently distributed project so remote components do not share or overwrite one another's operations.
 
 ## OpenAPI is the API boundary
 
@@ -134,17 +134,18 @@ API mutations are distinct from application intent. `data-operation` invokes Ope
 
 ## Build boundary
 
-`npx metaproject build` produces browser-native ESM in the configured component output directory. The output includes:
+`npx metaproject build` produces a shared host runtime and independently loadable browser-native component modules in the configured component output directory. The output includes:
 
 - operation metadata (`api.js`);
-- the default REST runtime (`runtime.js`) configured to the first OpenAPI server;
-- one generated module per component;
-- an `index.js` entry point that registers all generated custom elements;
+- the shared host runtime (`index.js`) with the base data components and scoped operation registry;
+- a compatibility `runtime.js` re-export;
+- one self-contained generated module per component (without bundled Core or Lit runtime);
+- an `all.js` convenience entry to install the runtime and load all local components;
 - `manifest.json` with component metadata.
 
 A host application can replace the default client for authentication, session integration, tracing, endpoint selection, or other transport policy without changing component source.
 
-See [using-components.md](using-components.md).
+See [using-components.md](using-components.md) and [remote-components.md](remote-components.md).
 
 ## Development tools
 

@@ -148,8 +148,9 @@ The default output is:
 
 ```text
 public/components/
-  index.js
-  runtime.js
+  index.js       # shared host runtime
+  runtime.js     # compatibility alias
+  all.js         # shared runtime + all local components
   api.js
   user-list.js
   manifest.json
@@ -159,7 +160,7 @@ public/components/
 ## 7. Use the Web Component
 
 ```html
-<script type="module" src="/components/index.js"></script>
+<script type="module" src="/components/all.js"></script>
 
 <user-list id="users"></user-list>
 <script type="module">
