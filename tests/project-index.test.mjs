@@ -30,12 +30,10 @@ test('Core indexes configured component source, OpenAPI resources, and relations
   assert.equal(index.diagnostics.filter(value=>value.severity==='error').length,0);
 });
 
-test('Canvas metadata is optional Core extension data rather than a project requirement',()=>{
-  const without=buildProjectIndex({files,openapi,project});
-  assert.deepEqual(without.views,[]);
-  const withCanvas=buildProjectIndex({files,openapi,project:{...project,canvas:[{id:'overview',name:'Overview',items:[]}]}});
-  assert.equal(withCanvas.views.length,1);
-  assert.equal(withCanvas.views[0].path,'overview');
+test('Core index only exposes API and component resources regardless of unrelated project metadata',()=>{
+  const index=buildProjectIndex({files,openapi,project:{...project,editor:{tabs:['overview']}}});
+  assert.equal(Object.hasOwn(index,'views'),false);
+  assert.deepEqual(index.resources.map(resource=>resource.kind).sort(),['component','component','operation','operation','schema']);
 });
 
 test('unknown component operations are diagnosed by the shared Core index',()=>{

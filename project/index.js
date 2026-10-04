@@ -9,7 +9,7 @@ export function createDefaultOpenApiSource({ title = 'Metaproject API' } = {}) {
 export const DEFAULT_METAPROJECT_SOURCE = createDefaultMetaprojectSource();
 
 // "Empty" OpenAPI means no modeled API resources yet, while remaining a valid
-// OpenAPI document that parsers, validators, Canvas, and build tools can consume.
+// OpenAPI document that parsers, validators, and build tools can consume.
 export const DEFAULT_OPENAPI_SOURCE = createDefaultOpenApiSource();
 
 /**
@@ -35,16 +35,6 @@ export async function ensureProjectFiles(filesystem, { name = 'Metaproject', api
   }
 
   return created;
-}
-
-// Canvas metadata is optional extension data in metaproject.yaml. These helpers
-// remain here so Canvas can consume it without making Canvas a Core dependency.
-export function projectCanvases(project) {
-  return Array.isArray(project?.canvas) ? project.canvas : [];
-}
-
-export function canvasById(project, id) {
-  return projectCanvases(project).find(canvas => canvas?.id === id) || null;
 }
 
 function yamlScalar(value) {

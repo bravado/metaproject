@@ -7,7 +7,7 @@ description: Create the smallest useful reusable Web Components from modeled Ope
 
 Read the configured OpenAPI document, existing component source, and `skills/component-authoring/SKILL.md`.
 
-The output is reusable Web Components, not Canvas-specific UI. A component should make sense when imported into any host application. Canvas may preview/compose it, but application routing and layout belong to the host.
+The output is reusable Web Components. Each component should work in any host application; application routing and layout belong to the host.
 
 Prefer a few domain components over abstraction layers. Put component context in `<title>` metadata instead of rendering duplicate headings.
 

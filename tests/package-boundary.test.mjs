@@ -24,7 +24,7 @@ test('browser-safe project entry point does not import Node filesystem tooling',
   assert.match(check,/node:fs/);
 });
 
-test('core does not depend on Canvas/editor packages',async()=>{
+test('core does not depend on editor packages',async()=>{
   const pkg=JSON.parse(await readFile('package.json','utf8'));
   const dependencies=Object.keys(pkg.dependencies||{});
   for(const forbidden of['rete','rete-area-plugin','@retejs/lit-plugin','monaco-editor','@scalar/openapi-parser'])assert.equal(dependencies.includes(forbidden),false);

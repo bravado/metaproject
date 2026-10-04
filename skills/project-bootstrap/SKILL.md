@@ -19,7 +19,7 @@ Metaproject data runtime + compiler
 Web Components usable by any application
 ```
 
-Canvas is optional development tooling, not the runtime architecture.
+Components must remain independent of any particular host application.
 
 ## Process
 
@@ -53,4 +53,4 @@ npx metaproject build
 - Prefer reusable schemas for objects shared by multiple operations.
 - Add examples that make components useful before a live backend exists.
 - Do not put application routing/layout into reusable component source; emit semantic `data-action` events and let the host application decide what they mean.
-- Do not invent a Canvas dependency. Generated components must remain useful in plain HTML, Lit, React/Vue wrappers, server-rendered applications, and other hosts.
+- Do not introduce application-specific runtime dependencies. Generated components must remain useful in plain HTML, Lit, React/Vue wrappers, server-rendered applications, and other hosts.

@@ -30,7 +30,7 @@ If the source is a multi-file specification with external `$ref` files, prefer p
 openapi: docs/openapi.yaml
 ```
 
-Core build/ref resolution supports local external references. Do not flatten a multi-file contract by hand just for Canvas.
+Core build/ref resolution supports local external references. Do not flatten a multi-file contract unnecessarily.
 
 ## Review after import
 

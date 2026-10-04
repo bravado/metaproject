@@ -2,7 +2,7 @@ const METHODS = ['get','put','post','delete','options','head','patch','trace'];
 
 /**
  * Build the framework-agnostic Metaproject resource index for an OpenAPI document.
- * Canvas, CLI validation, and other development tools should consume this instead
+ * CLI validation and other development tools should consume this instead
  * of maintaining their own OpenAPI graph/index implementation.
  */
 export function buildOpenApiIndex(document) {

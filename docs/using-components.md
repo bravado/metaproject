@@ -1,6 +1,6 @@
 # Using generated components in an application
 
-Metaproject build output is browser-native ESM. Canvas is not required to run the components.
+Metaproject build output is browser-native ESM. Components run directly in host applications.
 
 After:
 
@@ -77,12 +77,13 @@ A thin framework wrapper can be added when the framework benefits from typed pro
 
 ## Configure the API client
 
-The generated runtime creates a default REST client from `metaproject.yaml` `api_root`.
+The generated runtime creates a default REST client from the first resolved OpenAPI `servers` entry.
 
-For many applications that is enough:
+For many applications a same-origin server entry is sufficient:
 
 ```yaml
-api_root: /api
+servers:
+  - url: /api
 ```
 
 A host may replace it:

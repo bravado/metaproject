@@ -126,7 +126,7 @@ document.querySelector('user-list').addEventListener('open', event => {
 });
 ```
 
-Keep routing, page layout, modal selection, and other application composition outside reusable component source. Canvas can optionally map the same events through `metaproject.yaml`, but components must not depend on Canvas.
+Keep routing, page layout, modal selection, and other application composition outside reusable component source.
 
 ## Finish
 

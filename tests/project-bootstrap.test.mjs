@@ -25,7 +25,6 @@ test('empty project is bootstrapped with the Core-owned API/component root files
   assert.match(DEFAULT_METAPROJECT_SOURCE, /^components:$/m);
   assert.match(DEFAULT_METAPROJECT_SOURCE, /^  source: components$/m);
   assert.match(DEFAULT_METAPROJECT_SOURCE, /^  output: public\/components$/m);
-  assert.doesNotMatch(DEFAULT_METAPROJECT_SOURCE, /^canvas:/m);
   assert.match(DEFAULT_OPENAPI_SOURCE, /^openapi: 3\.1\.0$/m);
   assert.match(DEFAULT_OPENAPI_SOURCE, /^servers:$/m);
   assert.match(DEFAULT_OPENAPI_SOURCE, /^  - url: \/api$/m);

@@ -131,7 +131,7 @@ A different host can use the same component with a modal, SPA router, side panel
 
 ## Authentication and HTTP integration
 
-If the generated default client can use the application's same-origin cookies, `api_root: /api` is often sufficient.
+If the default OpenAPI server is `/api`, the generated client can use same-origin cookies.
 
 For different roots, static headers, custom authentication, CSRF behavior, observability, or request middleware, configure the generated runtime from the host. See [using-components.md](using-components.md) and [data-source.md](data-source.md).
 
@@ -147,6 +147,3 @@ npx metaproject build
 
 You may also make the build part of the application's normal asset build/deployment. Generated files should generally be treated as build output rather than hand-maintained source.
 
-## Canvas is optional
-
-Canvas can open the same `metaproject.yaml`, OpenAPI, and component source for visual development. It is not needed to initialize, analyze, validate, build, or run the generated components.

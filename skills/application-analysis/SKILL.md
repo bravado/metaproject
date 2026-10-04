@@ -23,7 +23,7 @@ Metaproject data-source + compiler
 reusable Web Components
 ```
 
-Do not model Canvas. Do not model every controller/service method. Model stable HTTP capabilities that a browser component should consume.
+Do not model every controller/service method. Model stable HTTP capabilities that a browser component should consume.
 
 ## What to inspect
 

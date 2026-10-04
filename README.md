@@ -18,7 +18,7 @@ Metaproject Core
 Web Components usable by any application
 ```
 
-The generated components are ordinary browser custom elements. Use them in plain HTML/JavaScript, Lit, framework wrappers, server-rendered applications, or optional Metaproject Canvas compositions. Canvas is development tooling; it is not a runtime dependency of Core or the built components.
+The generated components are ordinary browser custom elements. Use them in plain HTML/JavaScript, Lit, framework wrappers, or server-rendered applications.
 
 ## Project shape
 
@@ -50,7 +50,7 @@ servers:
   - url: https://staging.example.test/api
 ```
 
-The generated default runtime uses the first OpenAPI server. Development tools such as Canvas can expose all declared servers as selectable HTTP sources. OpenAPI server variables are supported through their declared defaults/values.
+The generated default runtime uses the first OpenAPI server. Development tools can expose all declared servers as selectable HTTP sources. OpenAPI server variables are supported through their declared defaults/values.
 
 The OpenAPI path and component directories are configurable.
 
@@ -182,7 +182,7 @@ OpenAPI is also the source of truth for API server and security metadata. Core e
 - OAuth 2.0 and OpenID Connect access tokens;
 - mutual TLS transport metadata.
 
-Authentication credentials are runtime data and must not be committed to `openapi.yaml` or `metaproject.yaml`. A host application can supply its own configured client; Canvas provides a development-only credential UI for its selected OpenAPI server. OAuth/OpenID Connect client registration is provider/application configuration rather than OpenAPI contract data, so Canvas accepts an acquired access token instead of storing client secrets in the project.
+Authentication credentials are runtime data and must not be committed to `openapi.yaml` or `metaproject.yaml`. A host application can supply its own configured client. OAuth/OpenID Connect registration belongs to provider/application configuration rather than OpenAPI; supply acquired tokens securely at runtime.
 
 ## Public Web Component contract
 
@@ -254,7 +254,7 @@ npx metaproject check
 
 `check` validates the shared project model without building assets: OpenAPI resources, examples, component parsing, operation references, duplicate IDs/tags, and related contract diagnostics.
 
-The same project/OpenAPI indexers are exported by Core and consumed by Canvas/tooling, so diagnostics do not depend on a separate editor implementation.
+Core exports its project/OpenAPI indexers so other tools can reuse consistent diagnostics.
 
 ## Build
 

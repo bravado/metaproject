@@ -105,7 +105,7 @@ test('required path and request body validation mirrors the production call cont
   assert.doesNotThrow(()=>api.updateUser({path:{id:1},body:{}}));
 });
 
-test('Canvas can relax required inputs only during design-time initial render',()=>{
+test('Mock API can relax required inputs during initial previews',()=>{
   let phase='render';
   const api=createMockApi(specification(),{allowMissingRequired:()=>phase==='render'});
   assert.deepEqual(api.getUser(),{id:1,name:'John'});

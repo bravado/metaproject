@@ -1,7 +1,7 @@
 import { collectMockOperations, resolveMockResponse, validateMockInvocation } from './index.js';
 
 /**
- * Stateful OpenAPI-example transport used by Canvas. Reads start from the
+ * Stateful OpenAPI-example transport for development and tests. Reads start from the
  * canonical examples and then apply successful mutations made through this
  * client, so invalidation/refetch behaves like a real backend.
  */

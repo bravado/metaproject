@@ -14,7 +14,7 @@ test('README presents Metaproject as API-to-Web-Components glue and covers all a
   assert.match(source,/upsert-schema/);
   assert.doesNotMatch(source,/upsert-entity/);
   assert.match(source,/Core data-source/);
-  assert.match(source,/Canvas is development tooling/i);
+  assert.match(source,/ordinary browser custom elements/i);
 });
 
 test('package ships focused architecture, adoption, runtime, and host integration docs',async()=>{

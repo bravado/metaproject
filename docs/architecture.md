@@ -19,8 +19,7 @@ Web Components
       ├─ plain HTML / JavaScript
       ├─ Lit
       ├─ React/Vue/Svelte wrappers
-      ├─ server-rendered applications
-      └─ Metaproject Canvas (optional development tooling)
+      └─ server-rendered applications
 ```
 
 Core does not define application routing or page layout. It turns a stable API contract plus small component sources into browser-native custom elements that can be embedded in any application.
@@ -64,9 +63,9 @@ security:
   - bearer: []
 ```
 
-The generated default REST client uses the first resolved top-level OpenAPI server. Canvas can select any declared server for development/testing. Credentials never belong in either project file; hosts and development tools supply them at runtime.
+The generated default REST client uses the first resolved top-level OpenAPI server. Credentials never belong in either project file; hosts and development tools supply them at runtime.
 
-The OpenAPI path and component source/output directories are configurable. Canvas may store optional `canvas:` metadata in `metaproject.yaml`, but Core does not require it.
+The OpenAPI path and component source/output directories are configurable.
 
 ## OpenAPI is the API boundary
 
@@ -129,7 +128,7 @@ The resulting `open` event is a normal bubbling/composed DOM CustomEvent. The ho
 users.addEventListener('open', event => showUser(event.detail.resource));
 ```
 
-This is what allows the same component to work in multiple applications and in optional Canvas compositions.
+This is what allows the same component to work in multiple applications.
 
 API mutations are distinct from application intent. `data-operation` invokes OpenAPI; `data-action` emits semantic UI/application events.
 
@@ -143,7 +142,7 @@ API mutations are distinct from application intent. `data-operation` invokes Ope
 - an `index.js` entry point that registers all generated custom elements;
 - `manifest.json` with component metadata.
 
-The generated output contains no Canvas runtime dependency. A host application can replace the default client for authentication, session integration, tracing, endpoint selection, or other transport policy without changing component source.
+A host application can replace the default client for authentication, session integration, tracing, endpoint selection, or other transport policy without changing component source.
 
 See [using-components.md](using-components.md).
 
@@ -161,4 +160,3 @@ Core also owns the project-development model so every tool works against the sam
 - static component build;
 - agent skills for new projects, existing-code analysis, OpenAPI adoption, and component generation.
 
-Canvas consumes these Core facilities; it does not define them.

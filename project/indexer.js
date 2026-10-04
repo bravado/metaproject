@@ -13,14 +13,13 @@ const HTML_STANDARD_TAGS = new Set([
 
 /**
  * Build the canonical Metaproject resource/relationship index from project files
- * and OpenAPI. This is deliberately UI-agnostic so Canvas and other tooling can
+ * and OpenAPI. The resource index is UI-agnostic so other tools can
  * share the same diagnostics and dependency model.
  */
 export function buildProjectIndex({ files, openapi, project = {}, componentSource } = {}) {
   files ||= {};
   const apiIndex = buildOpenApiIndex(openapi);
   const components = [];
-  const views = [];
   const diagnostics = [...apiIndex.diagnostics];
   const rawRelationships = [...apiIndex.relationships];
   const sourceRoot = normalizeProjectPath(componentSource || project?.components?.source || 'components');
@@ -82,26 +81,6 @@ export function buildProjectIndex({ files, openapi, project = {}, componentSourc
     for (const dependency of customElementTags(source)) rawRelationships.push({type:'uses',source:tag,targetKind:'componentTag',target:dependency,origin:'component-source'});
   }
 
-  // Canvas metadata is optional. Core indexes it when present but never requires it.
-  if (project?.canvas != null && !Array.isArray(project.canvas)) {
-    diagnostics.push({severity:'error',code:'invalid-canvas-list',resource:'metaproject.yaml',message:'metaproject.canvas must be a list.'});
-  }
-  const canvasIds = new Set();
-  for (const [position, canvas] of (Array.isArray(project?.canvas) ? project.canvas : []).entries()) {
-    if (!canvas || typeof canvas !== 'object' || Array.isArray(canvas)) {
-      diagnostics.push({severity:'error',code:'invalid-canvas',resource:'metaproject.yaml',message:`canvas[${position}] must be a mapping.`});
-      continue;
-    }
-    const id = String(canvas.id || '').trim();
-    if (!id) {
-      diagnostics.push({severity:'error',code:'missing-canvas-id',resource:'metaproject.yaml',message:`canvas[${position}] is missing id.`});
-      continue;
-    }
-    if (canvasIds.has(id)) diagnostics.push({severity:'error',code:'duplicate-canvas-id',resource:'metaproject.yaml',message:`Duplicate canvas id: ${id}`});
-    canvasIds.add(id);
-    views.push({kind:'view',id,path:id,canvasId:id,title:String(canvas.name || humanizeCanvasId(id)),canvas});
-  }
-
   const componentByTag = new Map();
   for (const component of components) {
     const editorTab = component.advanced ? 'source' : 'html';
@@ -138,7 +117,6 @@ export function buildProjectIndex({ files, openapi, project = {}, componentSourc
     components,
     operations:apiIndex.operations,
     schemas:apiIndex.schemas,
-    views,
     resources:[...components,...apiIndex.operations,...apiIndex.schemas],
     relationships:dedupe(relationships),
     diagnostics
@@ -166,4 +144,3 @@ function unique(items){return [...new Set(items)];}
 function withDiagnosticSource(items,sourcePath,editorTab){return (items||[]).map(item=>({...item,sourcePath,editorTab}));}
 function withRelationshipSource(items,sourcePath,editorTab){return (items||[]).map(item=>({...item,sourcePath,editorTab}));}
 function dedupe(items){const seen=new Set();return items.filter(item=>{const key=`${item.type}|${item.source}|${item.target}`;if(seen.has(key))return false;seen.add(key);return true;});}
-function humanizeCanvasId(id){return String(id||'canvas').replace(/[-_]+/g,' ').replace(/\b\w/g,match=>match.toUpperCase());}

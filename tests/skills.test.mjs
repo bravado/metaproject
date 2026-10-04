@@ -43,9 +43,8 @@ test('component skills teach the declarative primitive API',()=>{
   assert.match(authoring,/kebab-case HTML attributes/i);
 });
 
-test('Core skills keep Canvas optional rather than making it the component runtime',()=>{
+test('Core skills keep generated components independent of host-specific routing and layout',()=>{
   const combined=[bootstrap,analysis,importing,creator,authoring].join('\n');
-  assert.match(combined,/Canvas is optional|Canvas.*optional/i);
-  assert.match(combined,/components must not depend on Canvas|Canvas.*not.*runtime/i);
+  assert.match(combined,/application routing|routing, page layout|routing\/layout/i);
   assert.doesNotMatch(combined,/views\//i);
 });

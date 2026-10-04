@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { resolveOpenApiRefs, resolveLocalRef } from '../openapi/index.js';
 
-test('OpenAPI resolver resolves external refs independently of Canvas/filesystem implementation', () => {
+test('OpenAPI resolver resolves external refs independently of filesystem implementation', () => {
   const root={openapi:'3.1.0',paths:{'/users':{$ref:'paths.json#/UserPath'}}};
   const files={
     'paths.json':JSON.stringify({UserPath:{get:{operationId:'listUsers',responses:{'200':{description:'ok'}}}}})

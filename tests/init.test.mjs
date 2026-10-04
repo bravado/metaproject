@@ -15,7 +15,6 @@ test('init creates a complete host-neutral Metaproject foundation in a Composer-
     assert.match(config,/name: DB/);
     assert.match(config,/source: components/);
     assert.match(config,/output: public\/components/);
-    assert.doesNotMatch(config,/^canvas:/m);
     assert.match(fs.readFileSync(path.join(root,'openapi.yaml'),'utf8'),/openapi: 3\.1\.0/);
     assert.match(fs.readFileSync(path.join(root,'openapi.yaml'),'utf8'),/title: DB API/);
     assert.ok(fs.statSync(path.join(root,'components')).isDirectory());
