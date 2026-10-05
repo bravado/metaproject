@@ -54,24 +54,6 @@ Paths must stay inside the project root. Escaping the root with an absolute path
 | `build.minify` | boolean | `false` | Minify generated browser bundles. The CLI `--minify` flag overrides the configured false/default value for that invocation. |
 | `build.sourcemap` | boolean | `false` | Generate source maps. The CLI `--sourcemap` flag overrides the configured false/default value for that invocation. |
 
-## API endpoint migration
-
-`api_root` is not supported. API endpoint information belongs in the OpenAPI document so every consumer uses the same contract.
-
-Replace:
-
-```yaml
-api_root: /api
-```
-
-with a top-level OpenAPI server:
-
-```yaml
-servers:
-  - url: /api
-```
-
-The first resolved OpenAPI server is the generated runtime's default API root.
 
 ## Validation errors
 
