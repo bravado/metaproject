@@ -185,4 +185,5 @@ function assertBrowserNativeOutput(outputAbsolute){const bareImport=/\b(?:from\s
 function parseDocument(source,filePath){const text=String(source||'').trim();if(!text)return{};return String(filePath).toLowerCase().endsWith('.json')?JSON.parse(text):parseYaml(text);}
 function safeProjectPath(root,relative){const target=path.resolve(root,normalizeProjectPath(relative));const rel=path.relative(root,target);if(rel.startsWith('..')||path.isAbsolute(rel))throw new Error(`Path escapes the Metaproject root: ${relative}`);return target;}
 function normalizeProjectPath(value){return String(value||'').replace(/\\/g,'/').replace(/^\.\//,'').replace(/\/$/,'');}
+function dedupeDiagnostics(items){const seen=new Set();return(items||[]).filter(item=>{const key=`${item.severity}|${item.code}|${item.path||''}|${item.message}`;if(seen.has(key))return false;seen.add(key);return true;});}
 function walk(dir){if(!fs.existsSync(dir))return[];const files=[];for(const entry of fs.readdirSync(dir,{withFileTypes:true})){const target=path.join(dir,entry.name);if(entry.isDirectory())files.push(...walk(target));else files.push(target);}return files;}
