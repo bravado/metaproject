@@ -55,8 +55,6 @@ servers:
         enum: [staging, production]
 ```
 
-`api_root` is not a Metaproject configuration field; keep endpoint information in OpenAPI so every consumer sees the same API contract.
-
 ## 3. Model the API before the component
 
 Define stable browser-facing operations in OpenAPI. For example:
