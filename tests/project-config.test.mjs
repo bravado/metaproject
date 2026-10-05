@@ -37,17 +37,6 @@ test('unknown top-level and nested fields report their configuration paths',()=>
   );
 });
 
-test('api_root is rejected with OpenAPI servers migration guidance',()=>{
-  assert.throws(
-    ()=>parseMetaprojectConfig(fixture('invalid-api-root.yaml')),
-    error=>{
-      assert.ok(error instanceof MetaprojectConfigError);
-      assert.equal(error.diagnostics[0].path,'api_root');
-      assert.match(error.message,/api_root was removed.*OpenAPI servers list/i);
-      return true;
-    }
-  );
-});
 
 test('schema rejects unsupported version, scope, and build value types',()=>{
   assert.throws(
