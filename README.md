@@ -42,6 +42,8 @@ components:
   output: public/components
 ```
 
+See the [canonical `metaproject.yaml` configuration reference](docs/configuration.md) for every supported field and default. `metaproject check` and `metaproject build` reject unknown top-level and nested configuration fields.
+
 API endpoints belong to OpenAPI, not `metaproject.yaml`:
 
 ```yaml
@@ -306,6 +308,7 @@ Core ships focused skills instead of one monolithic workflow:
 ## Documentation
 
 - [Architecture](docs/architecture.md)
+- [`metaproject.yaml` configuration](docs/configuration.md)
 - [Getting started from scratch](docs/getting-started.md)
 - [Adopting an existing application](docs/adopting-existing-application.md)
 - [Core data-source](docs/data-source.md)

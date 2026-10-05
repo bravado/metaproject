@@ -1,0 +1,8 @@
+version: 1
+name: Broken Fixture
+opneapi: openapi.yaml
+components:
+  source: components
+  outpt: public/components
+build:
+  sourcemaps: true

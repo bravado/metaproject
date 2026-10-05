@@ -1,0 +1,11 @@
+version: 1
+name: Configuration Fixture
+scope: fixture.api
+openapi: spec/openapi.yaml
+components:
+  source: ui/components
+  output: public/metaproject
+  output_api: public/metaproject/api.generated.js
+build:
+  minify: true
+  sourcemap: false
