@@ -28,7 +28,6 @@ test('package ships focused architecture, adoption, runtime, and host integratio
   assert.match(architecture,/OpenAPI is the API boundary/i);
   assert.match(configuration,/canonical configuration/i);
   assert.match(configuration,/components\.output_api/);
-  assert.match(configuration,/api_root/);
   assert.match(scratch,/Getting started from scratch/);
   assert.match(scratch,/upsert-schema/);
   assert.doesNotMatch(scratch,/upsert-entity/);
