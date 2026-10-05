@@ -1,0 +1,5 @@
+version: "1"
+scope: Billing
+build:
+  minify: "true"
+  sourcemap: 1

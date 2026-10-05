@@ -7,6 +7,7 @@ import { parse as parseYaml } from 'yaml';
 import { generateApiModule, collectApiOperations } from '../operations/index.js';
 import { resolveOpenApiRefs, assertOpenApiExamples, collectOpenApiServers, resolveOpenApiServerUrl } from '../openapi/index.js';
 import { compileComponentModule, parseComponentSource, tagFromComponentPath } from '../compiler/index.js';
+import { parseMetaprojectConfig } from '../project/config.js';
 
 export const DEFAULT_COMPONENT_SOURCE='components';
 export const DEFAULT_COMPONENT_OUTPUT='public/components';
@@ -77,8 +78,7 @@ export function loadProjectBuildContext(root=process.cwd()){
   root=path.resolve(root);
   const configPath=path.join(root,'metaproject.yaml');
   if(!fs.existsSync(configPath))throw new Error(`Metaproject project not found: ${configPath}. Run "npx metaproject init" first.`);
-  const config=parseYaml(fs.readFileSync(configPath,'utf8'))||{};
-  if(Object.prototype.hasOwnProperty.call(config,'api_root'))throw new Error('metaproject.yaml api_root was removed. Define the API endpoint with the top-level OpenAPI servers list instead.');
+  const config=parseMetaprojectConfig(fs.readFileSync(configPath,'utf8'),{filePath:'metaproject.yaml'});
   const openapiPath=normalizeProjectPath(config.openapi||DEFAULT_OPENAPI_PATH);
   const openapiAbsolute=safeProjectPath(root,openapiPath);
   if(!fs.existsSync(openapiAbsolute))throw new Error(`OpenAPI file not found: ${openapiPath}. Run "npx metaproject init" first.`);
@@ -87,7 +87,6 @@ export function loadProjectBuildContext(root=process.cwd()){
   const defaultServer=collectOpenApiServers(resolvedOpenApi)[0];
   const apiRoot=resolveOpenApiServerUrl(defaultServer);
   const scope=String(config.scope || 'default');
-  if(!/^[a-z][a-z0-9._-]*$/.test(scope))throw new Error('metaproject.yaml scope must be a lowercase identifier (letters, numbers, dot, underscore, hyphen).');
   const componentSourceDir=normalizeProjectPath(config.components?.source||DEFAULT_COMPONENT_SOURCE);
   const outputDir=normalizeProjectPath(config.components?.output||DEFAULT_COMPONENT_OUTPUT);
   return{root,config,openapiPath,openapiAbsolute,openapi,resolvedOpenApi,apiRoot,scope,componentSourceDir,outputDir};
