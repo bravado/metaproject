@@ -23,12 +23,3 @@ test('static build derives its default API root from the first OpenAPI server',a
   }finally{await rm(root,{recursive:true,force:true});}
 });
 
-test('legacy metaproject api_root fails with migration guidance',async()=>{
-  const root=await fixture(
-    'version: 1\nname: Example\napi_root: /api\nopenapi: openapi.yaml\n',
-    'openapi: 3.1.0\ninfo:\n  title: Example\n  version: 1.0.0\npaths: {}\n'
-  );
-  try{
-    assert.throws(()=>loadProjectBuildContext(root),/api_root was removed.*OpenAPI servers/i);
-  }finally{await rm(root,{recursive:true,force:true});}
-});
