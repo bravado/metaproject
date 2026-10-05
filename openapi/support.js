@@ -108,6 +108,7 @@ function scanRefs(value,path,diagnostics){
 }
 
 function scanParameter(openapi,rawParameter,path,diagnostics){
+  if(isComponentRef(rawParameter,'parameters')) return;
   const parameter=resolveLocal(openapi,rawParameter);
   if(!isObject(parameter)) return;
 
@@ -155,6 +156,7 @@ function scanParameter(openapi,rawParameter,path,diagnostics){
 }
 
 function scanRequestBody(openapi,rawBody,path,diagnostics){
+  if(isComponentRef(rawBody,'requestBodies')) return;
   const body=resolveLocal(openapi,rawBody);
   if(!isObject(body)) return;
   const entries=Object.entries(body.content||{});
@@ -177,6 +179,7 @@ function scanRequestBody(openapi,rawBody,path,diagnostics){
 }
 
 function scanResponse(openapi,rawResponse,path,diagnostics){
+  if(isComponentRef(rawResponse,'responses')) return;
   const response=resolveLocal(openapi,rawResponse);
   if(!isObject(response)) return;
   if(isObject(response.links)&&Object.keys(response.links).length){
@@ -193,6 +196,7 @@ function scanResponse(openapi,rawResponse,path,diagnostics){
 }
 
 function scanSchema(openapi,rawSchema,path,diagnostics){
+  if(isComponentRef(rawSchema,'schemas')) return;
   const schema=resolveLocal(openapi,rawSchema);
   if(!isObject(schema)) return;
   for(const keyword of ['allOf','oneOf','anyOf']){
@@ -279,6 +283,7 @@ function schemaType(schema){
   return '';
 }
 
+function isComponentRef(value,section){return isObject(value)&&typeof value.$ref==='string'&&value.$ref.startsWith(`#/components/${section}/`);}
 function mediaBase(value){return String(value||'').split(';',1)[0].trim().toLowerCase();}
 function isObject(value){return Boolean(value)&&typeof value==='object'&&!Array.isArray(value);}
 function clone(value){return value===undefined?undefined:(typeof structuredClone==='function'?structuredClone(value):JSON.parse(JSON.stringify(value)));}
