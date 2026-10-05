@@ -5,7 +5,7 @@ Metaproject is the glue between an HTTP API contract and reusable Web Components
 ```text
 backend / API
       │
-      │ OpenAPI 3.x
+      │ OpenAPI 3.0/3.1 supported subset
       ▼
 Metaproject Core
   ├─ API model + validation
@@ -66,6 +66,8 @@ security:
 The generated default REST client uses the first resolved top-level OpenAPI server. Credentials never belong in either project file; hosts and development tools supply them at runtime.
 
 The OpenAPI path and component source/output directories are configurable. Define a unique `scope` for every independently distributed project so remote components do not share or overwrite one another's operations.
+
+The exact OpenAPI compatibility boundary is documented in [openapi-support.md](openapi-support.md); unsupported constructs are rejected rather than silently approximated.
 
 ## OpenAPI is the API boundary
 

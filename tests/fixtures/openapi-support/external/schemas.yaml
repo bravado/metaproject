@@ -1,0 +1,6 @@
+User:
+  x-project-id: schema-user
+  type: object
+  properties:
+    id: { type: integer }
+    name: { type: string }

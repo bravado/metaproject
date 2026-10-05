@@ -17,7 +17,7 @@ try {
     const { root } = parseRootArgs(argv);
     const result=checkProject({root});
     console.log(`Metaproject check: ${result.errors.length} error(s), ${result.warnings.length} warning(s).`);
-    for(const diagnostic of result.diagnostics) console.log(`  ${diagnostic.severity === 'warning' ? 'WARN' : 'ERROR'} ${diagnostic.code}: ${diagnostic.message}`);
+    for(const diagnostic of result.diagnostics){const location=diagnostic.path?` ${diagnostic.path}`:'';console.log(`  ${diagnostic.severity === 'warning' ? 'WARN' : 'ERROR'} ${diagnostic.code}${location}: ${diagnostic.message}`);}
     if(result.errors.length)process.exitCode=1;
   } else if (command === 'build') {
     const { buildProject } = await import('../build/index.js');
@@ -81,7 +81,7 @@ try {
     if (!['help','--help','-h'].includes(command)) process.exitCode = 1;
   }
 } catch (error) {
-  const concise=['ApiCliError','MetaprojectConfigError'].includes(error?.name);
+  const concise=['ApiCliError','MetaprojectConfigError','OpenApiSupportError'].includes(error?.name);
   console.error(concise ? error.message : (error?.stack || error?.message || String(error)));
   process.exitCode = Number.isInteger(error?.exitCode) ? error.exitCode : 1;
 }

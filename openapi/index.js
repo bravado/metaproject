@@ -30,6 +30,9 @@ export function resolveOpenApiRefs(document, {
 
     if (typeof value.$ref === 'string' && !value.$ref.startsWith('#')) {
       const [fileRef, pointer = ''] = value.$ref.split('#', 2);
+      if (/^(?:(?:https?:)?\/\/|[a-z][a-z0-9+.-]*:)/i.test(fileRef)) {
+        throw new Error(`Remote OpenAPI $ref is not supported: ${value.$ref}. Use a project-relative external file.`);
+      }
       const targetPath = normalizeRelative(currentPath, fileRef);
       const key = `${targetPath}#${pointer}`;
       if (stack.has(key)) return structuredCloneSafe(value);
@@ -116,3 +119,5 @@ export {
   applyOpenApiSecurity,
   findOpenApiOperation
 } from './runtime.js';
+
+export { OpenApiSupportError, validateOpenApiSupport, assertOpenApiSupport } from './support.js';

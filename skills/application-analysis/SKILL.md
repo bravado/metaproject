@@ -7,7 +7,7 @@ description: Analyze an existing application without a sufficient API contract, 
 
 Use this when an application already exists but its browser-facing API is missing or incompletely modeled.
 
-If a usable OpenAPI 3.x contract already exists, use `node_modules/metaproject/skills/openapi-import/SKILL.md` first instead of reverse-engineering the application.
+If a usable OpenAPI 3.0/3.1 contract within Core's documented support matrix already exists, use `node_modules/metaproject/skills/openapi-import/SKILL.md` first instead of reverse-engineering the application.
 
 ## Goal
 

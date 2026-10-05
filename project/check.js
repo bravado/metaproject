@@ -7,7 +7,7 @@ import { buildProjectIndex } from './indexer.js';
 /** Validate the API/component contract without producing build output. */
 export function checkProject({ root = process.cwd() } = {}) {
   root=path.resolve(root);
-  const context=loadProjectBuildContext(root);
+  const context=loadProjectBuildContext(root,{allowUnsupported:true});
   const files=readComponentFiles(root,context.componentSourceDir);
   const index=buildProjectIndex({files,openapi:context.resolvedOpenApi,project:context.config,componentSource:context.componentSourceDir});
   const exampleDiagnostics=validateOpenApiExamples(context.resolvedOpenApi).map(item=>({
@@ -16,7 +16,7 @@ export function checkProject({ root = process.cwd() } = {}) {
     resource:item.resource || item.operationId || 'openapi.yaml',
     message:item.message
   }));
-  const diagnostics=[...index.diagnostics,...exampleDiagnostics];
+  const diagnostics=[...(context.supportDiagnostics||[]),...index.diagnostics,...exampleDiagnostics];
   return {
     root,
     config:context.config,
