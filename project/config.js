@@ -74,18 +74,11 @@ function validateValue(value,schema,currentPath,diagnostics) {
       continue;
     }
     if(schema.additionalProperties === false) {
-      if(currentPath === '' && key === 'api_root') {
-        diagnostics.push({
-          path:itemPath,
-          message:'api_root was removed. Define the API endpoint with the top-level OpenAPI servers list instead.'
-        });
-      } else {
-        const supported=Object.keys(properties).join(', ');
-        diagnostics.push({
-          path:itemPath,
-          message:`unknown configuration field. Supported fields: ${supported || '(none)'}.`
-        });
-      }
+      const supported=Object.keys(properties).join(', ');
+      diagnostics.push({
+        path:itemPath,
+        message:`unknown configuration field. Supported fields: ${supported || '(none)'}.`
+      });
     }
   }
 }
