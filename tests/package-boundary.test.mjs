@@ -2,19 +2,30 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-test('runtime and project tooling subpaths point at canonical Core implementations',async()=>{
+const PUBLIC_EXPORTS={
+  './components':'./components/index.js',
+  './data-source':'./data-source/index.js',
+  './compiler':'./compiler/index.js',
+  './compiler/browser':'./compiler/browser.js',
+  './vite':'./vite/index.js',
+  './openapi':'./openapi/index.js',
+  './project':'./project/index.js'
+};
+
+test('package exports exactly the frozen 0.11 public JavaScript surface',async()=>{
   const pkg=JSON.parse(await readFile('package.json','utf8'));
-  assert.equal(pkg.exports['./components'],'./components/index.js');
-  assert.equal(pkg.exports['./data-source'],'./data-source/index.js');
-  assert.equal(pkg.exports['./compiler'],'./compiler/index.js');
-  assert.equal(pkg.exports['./operations'],'./operations/index.js');
-  assert.equal(pkg.exports['./api'],'./api/index.js');
-  assert.equal(pkg.exports['./openapi'],'./openapi/index.js');
-  assert.equal(pkg.exports['./project'],'./project/index.js');
-  assert.equal(pkg.exports['./project/check'],'./project/check.js');
-  assert.ok(pkg.files.includes('api/'));
+  assert.deepEqual(pkg.exports,PUBLIC_EXPORTS);
+  assert.equal(pkg.exports['.'],undefined);
   assert.ok(pkg.files.includes('docs/'));
   assert.ok(pkg.files.includes('skills/'));
+});
+
+test('CLI/build implementation modules are not package exports',async()=>{
+  const pkg=JSON.parse(await readFile('package.json','utf8'));
+  for(const internal of[
+    './operations','./api','./build','./mock-api','./mock-api/client',
+    './project/check','./openapi/mutator','./init','./openapi/project-tools'
+  ]) assert.equal(pkg.exports[internal],undefined,internal);
 });
 
 test('browser-safe project entry point does not import Node filesystem tooling',async()=>{

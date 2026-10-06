@@ -258,7 +258,13 @@ npx metaproject check
 
 `check` validates the shared project model without building assets: OpenAPI resources, examples, component parsing, operation references, duplicate IDs/tags, and related contract diagnostics.
 
-Core exports its project/OpenAPI indexers so other tools can reuse consistent diagnostics.
+Core exposes its project/OpenAPI indexers through the experimental JavaScript tooling API so other tools can reuse consistent diagnostics.
+
+## JavaScript API
+
+Metaproject intentionally does not provide a root `import 'metaproject'` entry. Use the documented subpath exports so browser runtime code and Node tooling stay explicit.
+
+The runtime entry points `metaproject/components` and `metaproject/data-source` are stable for the 0.11.x line. Compiler, Vite, OpenAPI, and project-model tooling are public but experimental. See the [JavaScript API and compatibility policy](docs/public-api.md).
 
 ## Build
 
@@ -312,6 +318,7 @@ Core ships focused skills instead of one monolithic workflow:
 - [Architecture](docs/architecture.md)
 - [`metaproject.yaml` configuration](docs/configuration.md)
 - [OpenAPI support matrix](docs/openapi-support.md)
+- [JavaScript API and compatibility](docs/public-api.md)
 - [Getting started from scratch](docs/getting-started.md)
 - [Adopting an existing application](docs/adopting-existing-application.md)
 - [Core data-source](docs/data-source.md)

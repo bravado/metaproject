@@ -21,6 +21,7 @@ test('package ships focused architecture, adoption, runtime, and host integratio
   const architecture=await read('docs/architecture.md');
   const configuration=await read('docs/configuration.md');
   const openapiSupport=await read('docs/openapi-support.md');
+  const publicApi=await read('docs/public-api.md');
   const scratch=await read('docs/getting-started.md');
   const existing=await read('docs/adopting-existing-application.md');
   const dataSource=await read('docs/data-source.md');
@@ -34,6 +35,12 @@ test('package ships focused architecture, adoption, runtime, and host integratio
   assert.match(openapiSupport,/allOf/);
   assert.match(openapiSupport,/deepObject/);
   assert.match(openapiSupport,/remote HTTP/i);
+  assert.match(publicApi,/metaproject\/components/);
+  assert.match(publicApi,/metaproject\/data-source/);
+  assert.match(publicApi,/Stable/);
+  assert.match(publicApi,/Experimental/);
+  assert.match(publicApi,/Internal/);
+  assert.match(publicApi,/no root/i);
   assert.match(scratch,/Getting started from scratch/);
   assert.match(scratch,/upsert-schema/);
   assert.doesNotMatch(scratch,/upsert-entity/);
