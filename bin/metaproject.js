@@ -27,11 +27,6 @@ try {
     console.log(`  Components: ${result.components.count}`);
     console.log(`  Operations: ${result.api.operations.length}`);
     console.log(`  Output:     ${result.outputDir}`);
-  } else if (command === 'build-api') {
-    const { buildProjectApiModule } = await import('../build/index.js');
-    const options = parseRootArgs(argv);
-    const result = buildProjectApiModule(options);
-    console.log(`Built API metadata: ${result.outputPath}`);
   } else if (command === 'import-openapi') {
     const { importProjectOpenApi } = await import('../openapi/project-tools.js');
     const { root, source, force } = parseImportArgs(argv);
@@ -57,20 +52,19 @@ try {
         throw new Error(`OpenAPI examples are incomplete:\n${details}`);
       }
       console.log('OpenAPI examples are complete.');
-    } else {
+    } else if (subcommand === 'upsert-operation' || subcommand === 'upsert-schema') {
       const { upsertProjectOperation, upsertProjectSchema } = await import('../openapi/project-tools.js');
       const { root, input } = parseOpenApiMutationArgs(argv);
       const values = readJsonInput(input);
       if (subcommand === 'upsert-operation') {
         const result = upsertProjectOperation({ root, values });
         console.log(`${result.created ? 'Created' : 'Updated'} ${result.method} ${result.operationPath} (${result.operationId})`);
-      } else if (subcommand === 'upsert-schema' || subcommand === 'upsert-entity') {
-        if (subcommand === 'upsert-entity') console.warn('metaproject openapi upsert-entity is deprecated; use upsert-schema instead.');
+      } else {
         const result = upsertProjectSchema({ root, values });
         console.log(`${result.created ? 'Created' : 'Updated'} Schema ${result.name}`);
-      } else {
-        throw new Error('Usage: metaproject openapi check-examples [project-root] | upsert-operation|upsert-schema --input FILE [project-root]');
       }
+    } else {
+      throw new Error('Usage: metaproject openapi check-examples [project-root] | upsert-operation|upsert-schema --input FILE [project-root]');
     }
   } else if (command === '--version' || command === '-v' || command === 'version') {
     const { readFile } = await import('node:fs/promises');
@@ -166,5 +160,5 @@ function printInitResult(result) {
 }
 
 function printHelp() {
-  console.log(`Metaproject\n\nUsage:\n  metaproject init [project-root] [--name NAME] [--no-agents]\n  metaproject check [project-root]\n  metaproject build [project-root] [--minify] [--sourcemap]\n  metaproject build-api [project-root]\n  metaproject import-openapi SOURCE [project-root] [--force]\n  metaproject api list [project-root]\n  metaproject api show OPERATION [project-root]\n  metaproject api call OPERATION [project-root] [parameters/options]\n  metaproject openapi check-examples [project-root]\n  metaproject openapi upsert-operation --input FILE [project-root]\n  metaproject openapi upsert-schema --input FILE [project-root]\n\nDeprecated alias:\n  metaproject openapi upsert-entity --input FILE [project-root]\n  metaproject --version\n\nSOURCE may be a local YAML/JSON file, file:// URL, or HTTP(S) URL.\n\nTypical setup:\n  npm install --save-dev metaproject\n  npx metaproject init\n  npx metaproject check\n  npx metaproject build\n`);
+  console.log(`Metaproject\n\nUsage:\n  metaproject init [project-root] [--name NAME] [--no-agents]\n  metaproject check [project-root]\n  metaproject build [project-root] [--minify] [--sourcemap]\n  metaproject import-openapi SOURCE [project-root] [--force]\n  metaproject api list [project-root]\n  metaproject api show OPERATION [project-root]\n  metaproject api call OPERATION [project-root] [parameters/options]\n  metaproject openapi check-examples [project-root]\n  metaproject openapi upsert-operation --input FILE [project-root]\n  metaproject openapi upsert-schema --input FILE [project-root]\n\n  metaproject --version\n\nSOURCE may be a local YAML/JSON file, file:// URL, or HTTP(S) URL.\n\nTypical setup:\n  npm install --save-dev metaproject\n  npx metaproject init\n  npx metaproject check\n  npx metaproject build\n`);
 }

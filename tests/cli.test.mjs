@@ -36,7 +36,7 @@ test('CLI help exposes adoption and build tools',()=>{
 });
 
 
-test('CLI uses schema terminology and keeps upsert-entity as a deprecated alias',()=>{
+test('CLI exposes only the canonical schema mutation command',()=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'metaproject-cli-schema-'));
   const schemaInput=path.join(root,'schema.json');
   try {
@@ -46,13 +46,22 @@ test('CLI uses schema terminology and keeps upsert-entity as a deprecated alias'
     const upsert=spawnSync(process.execPath,[bin,'openapi','upsert-schema','--input',schemaInput,root],{encoding:'utf8'});
     assert.equal(upsert.status,0,upsert.stderr);
     assert.match(upsert.stdout,/Created Schema User/);
-    const legacy=spawnSync(process.execPath,[bin,'openapi','upsert-entity','--input',schemaInput,root],{encoding:'utf8'});
-    assert.equal(legacy.status,0,legacy.stderr);
-    assert.match(legacy.stderr,/deprecated; use upsert-schema instead/);
-    assert.match(legacy.stdout,/Updated Schema User/);
+    const removed=spawnSync(process.execPath,[bin,'openapi','upsert-entity','--input',schemaInput,root],{encoding:'utf8'});
+    assert.equal(removed.status,1);
+    assert.match(removed.stderr,/Usage: metaproject openapi/);
   } finally {
     fs.rmSync(root,{recursive:true,force:true});
   }
+});
+
+test('CLI help omits non-public partial-build and compatibility commands',()=>{
+  const help=spawnSync(process.execPath,[bin,'help'],{encoding:'utf8'});
+  assert.equal(help.status,0,help.stderr);
+  assert.doesNotMatch(help.stdout,/build-api/);
+  assert.doesNotMatch(help.stdout,/upsert-entity/);
+
+  const removedBuild=spawnSync(process.execPath,[bin,'build-api'],{encoding:'utf8'});
+  assert.equal(removedBuild.status,1);
 });
 
 test('CLI exposes package version',()=>{
