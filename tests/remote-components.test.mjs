@@ -64,10 +64,8 @@ test('generated host index contains the runtime; independent components contain 
     assert.equal(manifest.generatedByVersion,packageVersion);
     assert.equal(manifest.runtime,'index.js');
     assert.equal(manifest.runtimeAbi,1);
-    assert.equal(manifest.runtimeSymbol,'metaproject.runtime.v1');
     assert.equal(manifest.scope,'users');
     assert.equal(manifest.components['user-list'].standalone,true);
-    assert.equal(manifest.components['user-list'].runtimeAbi,1);
     assert.equal(result.components.count,1);
   }finally{await fs.rm(root,{recursive:true,force:true});}
 });
@@ -89,7 +87,6 @@ test('bundles from different projects have isolated operation scopes and distinc
     const priorElements=globalThis.customElements;
     const registered=new Map(), scopes=new Map(), tags=new Map();
     globalThis[key]={
-      abiVersion:1,abiSymbol:'metaproject.runtime.v1',
       LitElement:class {},html:()=>{},nothing:null,unsafeCSS:css=>css,
       ResourceContextController:class {},requestResourceContext:()=>{},metaprojectEnvironment:()=>({navigate(){}}),
       registerMetaprojectScope:({scope,operations,apiRoot})=>scopes.set(scope,{operations,apiRoot}),
@@ -164,21 +161,48 @@ test('actual generated host runtime accepts a separately built component scope',
 });
 
 
-test('standalone component rejects an incompatible runtime ABI clearly',async()=>{
+test('standalone component accepts an existing v1 runtime without version metadata',async()=>{
   const root=await fixture('users','user-list');
   const key=Symbol.for('metaproject.runtime.v1');
   const previous={runtime:globalThis[key],elements:globalThis.customElements};
+  const registered=new Map();
   try{
     await buildProject({root});
     const component=await fs.readFile(path.join(root,'public/components/user-list.js'),'utf8');
-    globalThis[key]={abiVersion:2,abiSymbol:'metaproject.runtime.v2'};
+    globalThis[key]={
+      LitElement:class {},html:()=>{},nothing:null,unsafeCSS:css=>css,
+      ResourceContextController:class {},requestResourceContext:()=>{},metaprojectEnvironment:()=>({navigate(){}}),
+      registerMetaprojectScope:()=>{},
+      registerMetaprojectTag:()=>{}
+    };
+    globalThis.customElements={get:tag=>registered.get(tag),define:(tag,klass)=>registered.set(tag,klass)};
+    await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(component)+'#legacy-v1');
+    assert.ok(registered.has('user-list'));
+  }finally{
+    if(previous.runtime===undefined)delete globalThis[key];else globalThis[key]=previous.runtime;
+    if(previous.elements===undefined)delete globalThis.customElements;else globalThis.customElements=previous.elements;
+    await fs.rm(root,{recursive:true,force:true});
+  }
+});
+
+test('standalone component rejects an incompatible runtime ABI clearly',async()=>{
+  const root=await fixture('users','user-list');
+  const v1=Symbol.for('metaproject.runtime.v1');
+  const v2=Symbol.for('metaproject.runtime.v2');
+  const previous={v1:globalThis[v1],v2:globalThis[v2],elements:globalThis.customElements};
+  try{
+    await buildProject({root});
+    const component=await fs.readFile(path.join(root,'public/components/user-list.js'),'utf8');
+    delete globalThis[v1];
+    globalThis[v2]={};
     globalThis.customElements={get:()=>undefined,define:()=>{}};
     await assert.rejects(
       import('data:text/javascript;charset=utf-8,'+encodeURIComponent(component)+'#abi-mismatch'),
-      /Unsupported Metaproject runtime ABI: component requires v1 but host reports v2/
+      /Unsupported Metaproject runtime ABI: component requires v1/
     );
   }finally{
-    if(previous.runtime===undefined)delete globalThis[key];else globalThis[key]=previous.runtime;
+    if(previous.v1===undefined)delete globalThis[v1];else globalThis[v1]=previous.v1;
+    if(previous.v2===undefined)delete globalThis[v2];else globalThis[v2]=previous.v2;
     if(previous.elements===undefined)delete globalThis.customElements;else globalThis.customElements=previous.elements;
     await fs.rm(root,{recursive:true,force:true});
   }
