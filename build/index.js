@@ -14,7 +14,7 @@ export const DEFAULT_COMPONENT_OUTPUT='public/components';
 export const DEFAULT_OPENAPI_PATH='openapi.yaml';
 export const RUNTIME_ABI_VERSION=1;
 const RUNTIME_ABI_SYMBOL=`metaproject.runtime.v${RUNTIME_ABI_VERSION}`;
-export const MANIFEST_SCHEMA_VERSION=2;
+export const MANIFEST_SCHEMA_VERSION=1;
 export const BUILD_VERSION=JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..','package.json'),'utf8')).version;
 
 export async function buildProject({root=process.cwd(),minify,sourcemap}={}){
