@@ -12,6 +12,10 @@ import { parseMetaprojectConfig } from '../project/config.js';
 export const DEFAULT_COMPONENT_SOURCE='components';
 export const DEFAULT_COMPONENT_OUTPUT='public/components';
 export const DEFAULT_OPENAPI_PATH='openapi.yaml';
+export const RUNTIME_ABI_VERSION=1;
+export const RUNTIME_ABI_SYMBOL=`metaproject.runtime.v${RUNTIME_ABI_VERSION}`;
+export const MANIFEST_SCHEMA_VERSION=2;
+export const BUILD_VERSION=JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..','package.json'),'utf8')).version;
 
 export async function buildProject({root=process.cwd(),minify,sourcemap}={}){
   root=path.resolve(root);const project=loadProjectBuildContext(root);assertOpenApiExamples(project.resolvedOpenApi);await loadEsbuild();
@@ -37,7 +41,7 @@ export async function buildProjectComponents({root=process.cwd(),context,minify=
   const esbuild=await loadEsbuild();
   const buildOptions={bundle:true,splitting:false,format:'esm',platform:'browser',target:['es2022'],minify:Boolean(minify),sourcemap:Boolean(sourcemap),logLevel:'silent'};
   try{
-    const manifest={version:2,generatedBy:'metaproject',scope,apiRoot:project.apiRoot,openapi:project.openapiPath,runtime:'index.js',components:{}};
+    const manifest={version:MANIFEST_SCHEMA_VERSION,generatedBy:'metaproject',generatedByVersion:BUILD_VERSION,scope,apiRoot:project.apiRoot,openapi:project.openapiPath,runtime:'index.js',runtimeAbi:RUNTIME_ABI_VERSION,runtimeSymbol:RUNTIME_ABI_SYMBOL,components:{}};
     const runtimeEntry=path.join(temp,'runtime-entry.js');
     fs.writeFileSync(runtimeEntry,runtimeEntrySource({scope,apiRoot:project.apiRoot,operations}));
     await esbuild.build({...buildOptions,entryPoints:[runtimeEntry],outfile:path.join(outputAbsolute,'index.js'),plugins:[runtimeResolver()]});
@@ -58,7 +62,7 @@ export async function buildProjectComponents({root=process.cwd(),context,minify=
         "registerMetaprojectScope("+JSON.stringify({scope,operations,apiRoot:project.apiRoot})+");\n"+
         "registerMetaprojectTag("+JSON.stringify(component.tag)+","+JSON.stringify(scope)+");\n";
       fs.writeFileSync(path.join(temp,component.tag+'.js'),dependencyImports+(dependencyImports?'\n':'')+registration+compiled);
-      manifest.components[component.tag]={file:component.tag+'.js',standalone:true,scope,title:definition.title,properties:definition.properties,actions:definition.actions,actionOperations:definition.actionOperations,dependencies:definition.dependencies};
+      manifest.components[component.tag]={file:component.tag+'.js',standalone:true,scope,runtimeAbi:RUNTIME_ABI_VERSION,title:definition.title,properties:definition.properties,actions:definition.actions,actionOperations:definition.actionOperations,dependencies:definition.dependencies};
     }
     for(const tag of components.keys()){
       await esbuild.build({...buildOptions,entryPoints:[path.join(temp,tag+'.js')],outfile:path.join(outputAbsolute,tag+'.js'),plugins:[componentResolver(components)]});
@@ -108,8 +112,10 @@ function runtimeEntrySource({scope,apiRoot,operations}){
     "import * as components from 'metaproject/components';\n"+
     "import * as dataSource from 'metaproject/data-source';\n"+
     "const { createRestClient, configureDataRuntime, getDataRuntime } = dataSource;\n"+
-    "const runtimeSymbol=Symbol.for('metaproject.runtime.v1');\n"+
-    "if(globalThis[runtimeSymbol]) throw new Error('A Metaproject runtime is already installed. Load one host index.js only.');\n"+
+    "export const RUNTIME_ABI_VERSION="+RUNTIME_ABI_VERSION+";\n"+
+    "export const RUNTIME_ABI_SYMBOL="+JSON.stringify(RUNTIME_ABI_SYMBOL)+";\n"+
+    "const runtimeSymbol=Symbol.for(RUNTIME_ABI_SYMBOL);\n"+
+    "if(globalThis[runtimeSymbol]) throw new Error('A Metaproject runtime is already installed for ABI v'+RUNTIME_ABI_VERSION+'. Load one host index.js only.');\n"+
     "export const DEFAULT_SCOPE="+JSON.stringify(scope)+";\n"+
     "export const DEFAULT_API_ROOT="+JSON.stringify(apiRoot)+";\n"+
     "export const OPERATIONS="+JSON.stringify(operations)+";\n"+
@@ -129,6 +135,7 @@ function runtimeEntrySource({scope,apiRoot,operations}){
     "export function registerMetaprojectTag(tag,scope) {\n"+
     "  const existing=tags.get(tag);\n"+
     "  if(existing && existing!==scope) throw new Error('Metaproject component tag collision: <'+tag+'> is already registered for '+existing);\n"+
+    "  if(!existing && globalThis.customElements?.get?.(tag)) throw new Error('Metaproject component tag collision: <'+tag+'> is already defined outside this runtime.');\n"+
     "  tags.set(tag,scope);\n"+
     "}\n"+
     "export function configureMetaproject({scope=DEFAULT_SCOPE,client,operations,navigate}={}) {\n"+
@@ -137,6 +144,7 @@ function runtimeEntrySource({scope,apiRoot,operations}){
     "  return components.metaprojectEnvironment();\n"+
     "}\n"+
     "globalThis[runtimeSymbol]=Object.freeze({\n"+
+    "  abiVersion:RUNTIME_ABI_VERSION,abiSymbol:RUNTIME_ABI_SYMBOL,\n"+
     "  ...lit,...components,...dataSource,\n"+
     "  ResourceContextController:components.ResourceContextController,\n"+
     "  requestResourceContext:components.requestResourceContext,\n"+
@@ -168,10 +176,11 @@ function runtimeResolver(){
   }};
 }
 function componentResolver(components){
+  const prelude="const requiredRuntimeAbi="+RUNTIME_ABI_VERSION+"; const runtimeSymbol=Symbol.for("+JSON.stringify(RUNTIME_ABI_SYMBOL)+"); const r=globalThis[runtimeSymbol]; if(!r)throw new Error('Unsupported Metaproject runtime ABI: component requires v'+requiredRuntimeAbi+' ("+RUNTIME_ABI_SYMBOL+"). Load a compatible host index.js before this component.'); if(r.abiVersion!==requiredRuntimeAbi)throw new Error('Unsupported Metaproject runtime ABI: component requires v'+requiredRuntimeAbi+' but host reports v'+String(r.abiVersion??'unknown')+'.'); ";
   const bridge={
-    lit:"const r=globalThis[Symbol.for('metaproject.runtime.v1')]; if(!r)throw new Error('Load the host Metaproject index.js before remote components.'); export const LitElement=r.LitElement,html=r.html,nothing=r.nothing,unsafeCSS=r.unsafeCSS,css=r.css,svg=r.svg;",
-    core:"const r=globalThis[Symbol.for('metaproject.runtime.v1')]; if(!r)throw new Error('Load the host Metaproject index.js before remote components.'); export const ResourceContextController=r.ResourceContextController,requestResourceContext=r.requestResourceContext,metaprojectEnvironment=r.metaprojectEnvironment,registerMetaprojectScope=r.registerMetaprojectScope,registerMetaprojectTag=r.registerMetaprojectTag,configureMetaproject=r.configureMetaproject,readDataField=r.readDataField,writeDataField=r.writeDataField,emitDataAction=r.emitDataAction,humanizeField=r.humanizeField;",
-    data:"const r=globalThis[Symbol.for('metaproject.runtime.v1')]; if(!r)throw new Error('Load the host Metaproject index.js before remote components.'); export const RestClientError=r.RestClientError,createRestClient=r.createRestClient,configureDataRuntime=r.configureDataRuntime,getDataRuntime=r.getDataRuntime,getDataOperation=r.getDataOperation,subscribeDataRuntime=r.subscribeDataRuntime,invalidateDataRuntime=r.invalidateDataRuntime,invokeDataRequest=r.invokeDataRequest,selectDataSchema=r.selectDataSchema,joinApiUrl=r.joinApiUrl;"
+    lit:prelude+"export const LitElement=r.LitElement,html=r.html,nothing=r.nothing,unsafeCSS=r.unsafeCSS,css=r.css,svg=r.svg;",
+    core:prelude+"export const ResourceContextController=r.ResourceContextController,requestResourceContext=r.requestResourceContext,metaprojectEnvironment=r.metaprojectEnvironment,registerMetaprojectScope=r.registerMetaprojectScope,registerMetaprojectTag=r.registerMetaprojectTag,configureMetaproject=r.configureMetaproject,readDataField=r.readDataField,writeDataField=r.writeDataField,emitDataAction=r.emitDataAction,humanizeField=r.humanizeField;",
+    data:prelude+"export const RestClientError=r.RestClientError,createRestClient=r.createRestClient,configureDataRuntime=r.configureDataRuntime,getDataRuntime=r.getDataRuntime,getDataOperation=r.getDataOperation,subscribeDataRuntime=r.subscribeDataRuntime,invalidateDataRuntime=r.invalidateDataRuntime,invokeDataRequest=r.invokeDataRequest,selectDataSchema=r.selectDataSchema,joinApiUrl=r.joinApiUrl;"
   };
   return {name:'metaproject-shared-runtime',setup(build){
     build.onResolve({filter:/^(?:lit|metaproject\/components)$/},args=>({path:args.path==='lit'?'lit':'core',namespace:'mp-runtime-bridge'}));
