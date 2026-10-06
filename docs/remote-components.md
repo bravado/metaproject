@@ -28,13 +28,13 @@ Load the host's `index.js` before any remote component. Using `await import()` m
 
 For an application that only uses its own components, `<script type="module" src="/components/all.js"></script>` remains the simplest option.
 
-**Do not load another project's `index.js`.** The host should install exactly one runtime, and remote projects should distribute their individual component files only. Each standalone bundle declares and verifies the runtime ABI it requires. The current ABI is **v1**, located at `Symbol.for('metaproject.runtime.v1')`; a missing or mismatched ABI fails with an explicit compatibility error before the component registers itself.
+**Do not load another project's `index.js`.** The host should install exactly one runtime, and remote projects should distribute their individual component files only. Each standalone bundle looks up the runtime ABI it requires. The current ABI is **v1**, identified solely by `Symbol.for('metaproject.runtime.v1')`; if that symbol is not installed, the component fails with an explicit compatibility error before registering itself.
 
 Runtime ABI compatibility is intentionally independent from the npm package version. A component built by one Metaproject package version may run against a host built by another package version as long as both implement the same runtime ABI. The producer package version is recorded for diagnostics, not used as an equality requirement.
 
 ## Runtime ABI contract
 
-The runtime ABI is the JavaScript object shared between independently built host and component bundles. ABI v1 exposes the Lit primitives, component/data-source helpers, scope registration, tag registration, and runtime configuration consumed by standalone bundles. The host publishes `abiVersion: 1` and `abiSymbol: 'metaproject.runtime.v1'` on that object.
+The runtime ABI is the JavaScript object shared between independently built host and component bundles. ABI v1 exposes the Lit primitives, component/data-source helpers, scope registration, tag registration, and runtime configuration consumed by standalone bundles. The versioned global symbol is the compatibility identifier; the runtime object does not carry a second version field.
 
 Increment the ABI and use a new symbol such as `metaproject.runtime.v2` only for an incompatible runtime-boundary change, for example removing or renaming a shared export, changing the call contract of a shared function, or changing behavior in a way an existing standalone bundle cannot safely use. Additive runtime fields and compatible implementation fixes do not require a new ABI.
 
@@ -58,7 +58,7 @@ Run `npx metaproject build` on the remote project and serve `public/components/i
 
 The generated component exposes its scope to nested `<data-source>` elements automatically. For manually authored `<data-source>` instances, set the `scope` attribute explicitly when required.
 
-Scope names must be lowercase identifiers containing letters, numbers, dots, underscores, or hyphens. The default is `default` for backwards compatibility with a single project. For separate projects, explicitly choose unique scope names and distinct custom-element tags; loading the same scope with different operation definitions, or the same component tag from different scopes, is an error.
+Scope names must be lowercase identifiers containing letters, numbers, dots, underscores, or hyphens. The default is `default` for backwards compatibility with a single project. For separate projects, explicitly choose unique scope names and distinct custom-element tags; loading the same scope with different operation definitions, the same component tag from different scopes, or a tag already defined outside Metaproject is an error.
 
 ## Distribution files
 
@@ -70,9 +70,9 @@ The top-level `version` field is the **manifest schema version**. Schema version
 
 - `generatedBy` and `generatedByVersion` — producer identity and package/build version;
 - `runtime` — host runtime filename;
-- `runtimeAbi` and `runtimeSymbol` — required shared-runtime ABI;
+- `runtimeAbi` — required shared-runtime ABI; generated component code derives the matching symbol as `metaproject.runtime.vN`;
 - `scope` — API/runtime scope for this build;
-- `components.<tag>.file`, `standalone`, `scope`, and `runtimeAbi` — component loading/compatibility metadata.
+- `components.<tag>.file`, `standalone`, and `scope` — component loading metadata.
 
 Consumers may treat additional descriptive component fields such as titles, properties, actions, and dependencies as metadata that can grow additively within schema version 2. Removing a compatibility field or changing its meaning requires a new manifest schema version.
 
