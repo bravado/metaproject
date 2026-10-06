@@ -80,7 +80,7 @@ paths:
               schema:
                 type: array
                 items:
-                  \\$ref: '#/components/schemas/User'
+                  $ref: '#/components/schemas/User'
               example:
                 - {id: 1}
 components:
@@ -96,13 +96,13 @@ components:
 
     const check=spawnSync(process.execPath,[bin,'check',root],{encoding:'utf8'});
     assert.equal(check.status,0,check.stderr);
-    assert.match(check.stdout,/Config:\\s+metaproject\\.yaml/);
-    assert.match(check.stdout,/OpenAPI:\\s+openapi\\.yaml/);
-    assert.match(check.stdout,/Components:\\s+components \\(1 source\\)/);
-    assert.match(check.stdout,/Scope:\\s+billing/);
-    assert.match(check.stdout,/Schemas:\\s+1/);
-    assert.match(check.stdout,/Operations:\\s+1/);
-    assert.match(check.stdout,/Health:\\s+0 error\\(s\\), 0 warning\\(s\\)/);
+    assert.match(check.stdout,/Config:\s+metaproject\.yaml/);
+    assert.match(check.stdout,/OpenAPI:\s+openapi\.yaml/);
+    assert.match(check.stdout,/Components:\s+components \(1 source\)/);
+    assert.match(check.stdout,/Scope:\s+billing/);
+    assert.match(check.stdout,/Schemas:\s+1/);
+    assert.match(check.stdout,/Operations:\s+1/);
+    assert.match(check.stdout,/Health:\s+0 error\(s\), 0 warning\(s\)/);
   } finally {
     fs.rmSync(root,{recursive:true,force:true});
   }
@@ -116,7 +116,7 @@ test('CLI check tells an uninitialized project exactly how to initialize',()=>{
     assert.match(check.stderr,/Metaproject project is not initialized/);
     assert.match(check.stderr,/Run: metaproject init/);
     assert.doesNotMatch(check.stderr,/npx metaproject init/);
-    assert.doesNotMatch(check.stderr,/\\n\s+at /);
+    assert.doesNotMatch(check.stderr,/\n\s+at /);
   } finally {
     fs.rmSync(root,{recursive:true,force:true});
   }
