@@ -9,7 +9,7 @@ npm install --save-dev metaproject
 npx metaproject init
 ```
 
-`init` is conservative: it creates missing Metaproject files/directories and does not overwrite existing canonical files. It can also add a bounded Metaproject section to `AGENTS.md` so coding agents know which workflow to follow.
+`init` is conservative and idempotent: it creates missing Metaproject files/directories but never overwrites existing `metaproject.yaml` or OpenAPI source. Rerunning it is safe. By default it also maintains only the bounded section between `<!-- metaproject:start -->` and `<!-- metaproject:end -->` in `AGENTS.md`; content outside that block remains owned by the application and is left untouched. Use `--no-agents` when Metaproject should not create or update that managed block.
 
 A typical PHP/Rails/Django/etc. application can keep all existing application source where it is:
 
