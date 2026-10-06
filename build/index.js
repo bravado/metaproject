@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { parse as parseYaml } from 'yaml';
 import { generateApiModule, collectApiOperations } from '../operations/index.js';
-import { resolveOpenApiRefs, assertOpenApiExamples, collectOpenApiServers, resolveOpenApiServerUrl } from '../openapi/index.js';
+import { resolveOpenApiRefs, assertOpenApiExamples, collectOpenApiServers, resolveOpenApiServerUrl, validateOpenApiSupport, OpenApiSupportError } from '../openapi/index.js';
 import { compileComponentModule, parseComponentSource, tagFromComponentPath } from '../compiler/index.js';
 import { parseMetaprojectConfig } from '../project/config.js';
 
@@ -74,7 +74,7 @@ export async function buildProjectComponents({root=process.cwd(),context,minify=
 
 export function discoverProjectComponents(root,sourceDir=DEFAULT_COMPONENT_SOURCE){root=path.resolve(root);const sourceAbsolute=safeProjectPath(root,sourceDir);const out=new Map();if(!fs.existsSync(sourceAbsolute))return out;for(const htmlPath of walk(sourceAbsolute).filter(file=>path.basename(file)==='component.html')){const tag=tagFromComponentPath(htmlPath);if(out.has(tag))throw new Error(`Duplicate Metaproject component tag <${tag}>.`);const dir=path.dirname(htmlPath);const scriptPath=['component.ts','component.js'].map(name=>path.join(dir,name)).find(file=>fs.existsSync(file))||null;const stylePath=path.join(dir,'style.css');out.set(tag,{tag,htmlPath,relativeHtmlPath:normalizeProjectPath(path.relative(root,htmlPath)),scriptPath,stylePath:fs.existsSync(stylePath)?stylePath:null});}return out;}
 
-export function loadProjectBuildContext(root=process.cwd()){
+export function loadProjectBuildContext(root=process.cwd(),{allowUnsupported=false}={}){
   root=path.resolve(root);
   const configPath=path.join(root,'metaproject.yaml');
   if(!fs.existsSync(configPath))throw new Error(`Metaproject project not found: ${configPath}. Run "npx metaproject init" first.`);
@@ -83,13 +83,24 @@ export function loadProjectBuildContext(root=process.cwd()){
   const openapiAbsolute=safeProjectPath(root,openapiPath);
   if(!fs.existsSync(openapiAbsolute))throw new Error(`OpenAPI file not found: ${openapiPath}. Run "npx metaproject init" first.`);
   const openapi=parseDocument(fs.readFileSync(openapiAbsolute,'utf8'),openapiPath)||{};
-  const resolvedOpenApi=resolveOpenApiRefs(openapi,{sourcePath:openapiPath,readFile:refPath=>fs.readFileSync(safeProjectPath(root,refPath),'utf8'),parseDocument});
+  const rawSupportDiagnostics=validateOpenApiSupport(openapi);
+  const remoteRefErrors=rawSupportDiagnostics.filter(item=>item.severity==='error'&&item.code==='unsupported-remote-ref');
+  if(remoteRefErrors.length&&!allowUnsupported)throw new OpenApiSupportError(remoteRefErrors);
+  const resolvedOpenApi=remoteRefErrors.length
+    ? openapi
+    : resolveOpenApiRefs(openapi,{sourcePath:openapiPath,readFile:refPath=>fs.readFileSync(safeProjectPath(root,refPath),'utf8'),parseDocument});
+  const supportDiagnostics=dedupeDiagnostics([
+    ...rawSupportDiagnostics,
+    ...(resolvedOpenApi===openapi?[]:validateOpenApiSupport(resolvedOpenApi))
+  ]);
+  const supportErrors=supportDiagnostics.filter(item=>item.severity==='error');
+  if(supportErrors.length&&!allowUnsupported)throw new OpenApiSupportError(supportErrors);
   const defaultServer=collectOpenApiServers(resolvedOpenApi)[0];
   const apiRoot=resolveOpenApiServerUrl(defaultServer);
   const scope=String(config.scope || 'default');
   const componentSourceDir=normalizeProjectPath(config.components?.source||DEFAULT_COMPONENT_SOURCE);
   const outputDir=normalizeProjectPath(config.components?.output||DEFAULT_COMPONENT_OUTPUT);
-  return{root,config,openapiPath,openapiAbsolute,openapi,resolvedOpenApi,apiRoot,scope,componentSourceDir,outputDir};
+  return{root,config,openapiPath,openapiAbsolute,openapi,resolvedOpenApi,supportDiagnostics,apiRoot,scope,componentSourceDir,outputDir};
 }
 
 function runtimeEntrySource({scope,apiRoot,operations}){
@@ -174,4 +185,5 @@ function assertBrowserNativeOutput(outputAbsolute){const bareImport=/\b(?:from\s
 function parseDocument(source,filePath){const text=String(source||'').trim();if(!text)return{};return String(filePath).toLowerCase().endsWith('.json')?JSON.parse(text):parseYaml(text);}
 function safeProjectPath(root,relative){const target=path.resolve(root,normalizeProjectPath(relative));const rel=path.relative(root,target);if(rel.startsWith('..')||path.isAbsolute(rel))throw new Error(`Path escapes the Metaproject root: ${relative}`);return target;}
 function normalizeProjectPath(value){return String(value||'').replace(/\\/g,'/').replace(/^\.\//,'').replace(/\/$/,'');}
+function dedupeDiagnostics(items){const seen=new Set();return(items||[]).filter(item=>{const key=`${item.severity}|${item.code}|${item.path||''}|${item.message}`;if(seen.has(key))return false;seen.add(key);return true;});}
 function walk(dir){if(!fs.existsSync(dir))return[];const files=[];for(const entry of fs.readdirSync(dir,{withFileTypes:true})){const target=path.join(dir,entry.name);if(entry.isDirectory())files.push(...walk(target));else files.push(target);}return files;}

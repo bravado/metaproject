@@ -1,0 +1,82 @@
+openapi: 3.1.0
+info:
+  title: Unsupported features
+  version: '1'
+paths:
+  /search:
+    servers:
+      - url: https://path.example.test
+    get:
+      operationId: search
+      x-project-id: op-search
+      servers:
+        - url: https://operation.example.test
+      callbacks:
+        onResult:
+          '{$request.body#/callbackUrl}':
+            post:
+              responses:
+                '204': { description: done }
+      parameters:
+        - name: filter
+          in: query
+          style: deepObject
+          schema:
+            type: object
+            properties:
+              status: { type: string }
+        - name: tags
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string }
+        - name: X-Meta
+          in: header
+          style: form
+          schema: { type: string }
+        - name: session
+          in: cookie
+          schema: { type: string }
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string }
+      responses:
+        '200':
+          description: Results
+          links:
+            next:
+              operationId: search
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Base' }
+              example: { id: 1 }
+components:
+  schemas:
+    Base:
+      x-project-id: schema-base
+      type: object
+      properties:
+        id: { type: integer }
+    Combined:
+      x-project-id: schema-combined
+      allOf:
+        - { $ref: '#/components/schemas/Base' }
+        - type: object
+          properties:
+            name: { type: string }
+    Choice:
+      x-project-id: schema-choice
+      oneOf:
+        - { type: string }
+        - { type: integer }
+    Flexible:
+      x-project-id: schema-flexible
+      anyOf:
+        - { type: string }
+        - { type: boolean }

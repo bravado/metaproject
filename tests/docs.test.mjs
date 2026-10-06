@@ -20,6 +20,7 @@ test('README presents Metaproject as API-to-Web-Components glue and covers all a
 test('package ships focused architecture, adoption, runtime, and host integration docs',async()=>{
   const architecture=await read('docs/architecture.md');
   const configuration=await read('docs/configuration.md');
+  const openapiSupport=await read('docs/openapi-support.md');
   const scratch=await read('docs/getting-started.md');
   const existing=await read('docs/adopting-existing-application.md');
   const dataSource=await read('docs/data-source.md');
@@ -28,6 +29,11 @@ test('package ships focused architecture, adoption, runtime, and host integratio
   assert.match(architecture,/OpenAPI is the API boundary/i);
   assert.match(configuration,/canonical configuration/i);
   assert.match(configuration,/components\.output_api/);
+  assert.match(openapiSupport,/OpenAPI 3\.0\.x/);
+  assert.match(openapiSupport,/OpenAPI 3\.1\.x/);
+  assert.match(openapiSupport,/allOf/);
+  assert.match(openapiSupport,/deepObject/);
+  assert.match(openapiSupport,/remote HTTP/i);
   assert.match(scratch,/Getting started from scratch/);
   assert.match(scratch,/upsert-schema/);
   assert.doesNotMatch(scratch,/upsert-entity/);

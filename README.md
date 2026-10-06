@@ -5,7 +5,7 @@ Metaproject is the glue between your HTTP API and reusable Web Components.
 ```text
 API / backend
     │
-    │ OpenAPI 3.x
+    │ OpenAPI 3.0/3.1 supported subset
     ▼
 Metaproject Core
     │
@@ -73,7 +73,7 @@ node_modules/metaproject/skills/project-bootstrap/SKILL.md
 
 ### Existing application with an OpenAPI contract
 
-Initialize Metaproject, then import a bundled OpenAPI 3.x YAML/JSON file or URL:
+Initialize Metaproject, then import a bundled OpenAPI 3.0/3.1 YAML/JSON file or URL within Core's supported subset:
 
 ```bash
 npx metaproject init
@@ -217,6 +217,8 @@ See [Using generated components](docs/using-components.md).
 
 ## OpenAPI tooling
 
+Metaproject implements a documented OpenAPI 3.0/3.1 subset. See the [OpenAPI support matrix](docs/openapi-support.md) before adopting an existing contract; `metaproject check` reports unsupported and partially supported constructs.
+
 Metaproject keeps the API contract deterministic and useful for development previews:
 
 ```bash
@@ -309,6 +311,7 @@ Core ships focused skills instead of one monolithic workflow:
 
 - [Architecture](docs/architecture.md)
 - [`metaproject.yaml` configuration](docs/configuration.md)
+- [OpenAPI support matrix](docs/openapi-support.md)
 - [Getting started from scratch](docs/getting-started.md)
 - [Adopting an existing application](docs/adopting-existing-application.md)
 - [Core data-source](docs/data-source.md)

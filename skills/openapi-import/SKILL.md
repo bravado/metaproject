@@ -1,6 +1,6 @@
 ---
 name: metaproject-openapi-import
-description: Adopt an existing OpenAPI 3.x contract into Metaproject, normalize it for component tooling, add representative examples, then create reusable Web Components.
+description: Adopt an existing OpenAPI 3.0/3.1 contract within Core's supported subset, normalize it for component tooling, add representative examples, then create reusable Web Components.
 ---
 
 # Adopt an Existing OpenAPI Contract
@@ -15,14 +15,14 @@ Initialize Metaproject first if needed:
 npx metaproject init
 ```
 
-Import a bundled OpenAPI 3.x YAML/JSON file or URL:
+Import a bundled OpenAPI 3.0/3.1 YAML/JSON file or URL:
 
 ```bash
 npx metaproject import-openapi ./docs/openapi.yaml
 npx metaproject import-openapi https://example.test/openapi.json
 ```
 
-Import copies the contract into the Metaproject-owned `openapi.yaml`, preserves existing `operationId` values, generates missing operation IDs, and adds stable `x-project-id` values required by Metaproject tooling.
+Import copies the contract into the Metaproject-owned `openapi.yaml`, preserves existing `operationId` values, generates missing operation IDs, and adds stable `x-project-id` values required by Metaproject tooling. Run `npx metaproject check` after import and use `docs/openapi-support.md` as the compatibility boundary.
 
 If the source is a multi-file specification with external `$ref` files, prefer pointing `metaproject.yaml` directly at that existing root spec:
 

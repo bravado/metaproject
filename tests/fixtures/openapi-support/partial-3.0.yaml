@@ -1,0 +1,45 @@
+openapi: 3.0.3
+info:
+  title: Partial 3.0
+  version: '1'
+paths:
+  /sessions:
+    post:
+      operationId: createSession
+      x-project-id: op-create-session
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                username: { type: string }
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Session
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+              example: { token: abc }
+            text/plain:
+              schema: { type: string }
+              example: abc
+components:
+  securitySchemes:
+    cookieKey:
+      type: apiKey
+      in: cookie
+      name: session
+    mtls:
+      type: mutualTLS
+  schemas:
+    Session:
+      x-project-id: schema-session
+      type: object
+      properties:
+        token:
+          type: string
+          nullable: true

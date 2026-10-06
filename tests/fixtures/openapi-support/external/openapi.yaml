@@ -1,0 +1,22 @@
+openapi: 3.1.0
+info:
+  title: External refs
+  version: '1'
+paths:
+  /users:
+    get:
+      operationId: listUsers
+      x-project-id: op-list-users
+      responses:
+        '200':
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/User' }
+              example: [{ id: 1, name: Ada }]
+components:
+  schemas:
+    User:
+      $ref: ./schemas.yaml#/User

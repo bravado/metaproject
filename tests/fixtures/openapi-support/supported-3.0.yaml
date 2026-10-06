@@ -1,0 +1,66 @@
+openapi: 3.0.3
+info:
+  title: Supported 3.0
+  version: '1'
+servers:
+  - url: https://{env}.example.test/api
+    variables:
+      env:
+        default: staging
+security:
+  - apiKey: []
+paths:
+  /users/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getUser
+      x-project-id: op-get-user
+      parameters:
+        - name: include
+          in: query
+          schema:
+            type: array
+            items: { type: string }
+        - name: X-Tenant
+          in: header
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: User
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+              example: { id: '1', name: Ada }
+    patch:
+      operationId: updateUser
+      x-project-id: op-update-user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/User' }
+      responses:
+        '200':
+          description: User
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+              example: { id: '1', name: Grace }
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  schemas:
+    User:
+      x-project-id: schema-user
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }

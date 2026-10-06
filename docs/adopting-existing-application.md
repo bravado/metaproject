@@ -26,7 +26,7 @@ public/components/         # generated browser assets
 
 ### Existing OpenAPI contract
 
-If the application already has a useful bundled OpenAPI 3.x document, import it:
+If the application already has a useful bundled OpenAPI 3.0/3.1 document within Core's [supported subset](openapi-support.md), import it:
 
 ```bash
 npx metaproject import-openapi ./docs/openapi.yaml
@@ -71,7 +71,7 @@ existing routes + handlers + serializers
               ↓ static analysis
        browser API contract
               ↓
-          OpenAPI 3.x
+      OpenAPI 3.0/3.1 subset
               ↓
   Metaproject Web Components
 ```
