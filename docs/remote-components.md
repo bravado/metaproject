@@ -66,7 +66,7 @@ Each `<tag>.js` is a standalone JavaScript module and does not require sibling `
 
 ### Manifest compatibility
 
-The top-level `version` field is the **manifest schema version**. Schema version 2 is the current contract. The compatibility fields are:
+The top-level `version` field is the **manifest schema version**. Schema version 1 is the initial public contract. The compatibility fields are:
 
 - `generatedBy` and `generatedByVersion` — producer identity and package/build version;
 - `runtime` — host runtime filename;
@@ -74,7 +74,7 @@ The top-level `version` field is the **manifest schema version**. Schema version
 - `scope` — API/runtime scope for this build;
 - `components.<tag>.file`, `standalone`, and `scope` — component loading metadata.
 
-Consumers may treat additional descriptive component fields such as titles, properties, actions, and dependencies as metadata that can grow additively within schema version 2. Removing a compatibility field or changing its meaning requires a new manifest schema version.
+Consumers may treat additional descriptive component fields such as titles, properties, actions, and dependencies as metadata that can grow additively within schema version 1. Removing a compatibility field or changing its meaning requires a new manifest schema version.
 
 The `index.js` runtime is larger because it includes Lit and the Metaproject data primitives. It is intended to be loaded once by the host, not separately for each library.
 
