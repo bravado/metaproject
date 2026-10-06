@@ -28,7 +28,17 @@ Load the host's `index.js` before any remote component. Using `await import()` m
 
 For an application that only uses its own components, `<script type="module" src="/components/all.js"></script>` remains the simplest option.
 
-**Do not load another project's `index.js`.** The host should install exactly one runtime, and remote projects should distribute their individual component files only. A remote component checks for the host runtime and reports an error if it is missing. Make sure the host runtime implements the same `metaproject.runtime.v1` contract expected by the remote component; deploy compatible Core versions together.
+**Do not load another project's `index.js`.** The host should install exactly one runtime, and remote projects should distribute their individual component files only. Each standalone bundle looks up the runtime ABI it requires. The current ABI is **v1**, identified solely by `Symbol.for('metaproject.runtime.v1')`; if that symbol is not installed, the component fails with an explicit compatibility error before registering itself.
+
+Runtime ABI compatibility is intentionally independent from the npm package version. A component built by one Metaproject package version may run against a host built by another package version as long as both implement the same runtime ABI. The producer package version is recorded for diagnostics, not used as an equality requirement.
+
+## Runtime ABI contract
+
+The runtime ABI is the JavaScript object shared between independently built host and component bundles. ABI v1 exposes the Lit primitives, component/data-source helpers, scope registration, tag registration, and runtime configuration consumed by standalone bundles. The versioned global symbol is the compatibility identifier; the runtime object does not carry a second version field.
+
+Increment the ABI and use a new symbol such as `metaproject.runtime.v2` only for an incompatible runtime-boundary change, for example removing or renaming a shared export, changing the call contract of a shared function, or changing behavior in a way an existing standalone bundle cannot safely use. Additive runtime fields and compatible implementation fixes do not require a new ABI.
+
+A new npm package release does **not** imply a new runtime ABI. Conversely, a new ABI may be introduced before 1.0 if the shared runtime contract must break.
 
 ## Remote project
 
@@ -48,11 +58,23 @@ Run `npx metaproject build` on the remote project and serve `public/components/i
 
 The generated component exposes its scope to nested `<data-source>` elements automatically. For manually authored `<data-source>` instances, set the `scope` attribute explicitly when required.
 
-Scope names must be lowercase identifiers containing letters, numbers, dots, underscores, or hyphens. The default is `default` for backwards compatibility with a single project. For separate projects, explicitly choose unique scope names and distinct custom-element tags; loading the same scope with different operation definitions, or the same component tag from different scopes, is an error.
+Scope names must be lowercase identifiers containing letters, numbers, dots, underscores, or hyphens. The default is `default` for backwards compatibility with a single project. For separate projects, explicitly choose unique scope names and distinct custom-element tags; loading the same scope with different operation definitions, the same component tag from different scopes, or a tag already defined outside Metaproject is an error.
 
 ## Distribution files
 
-Each `<tag>.js` is a standalone JavaScript module and does not require sibling `runtime.js`, `api.js`, or chunk files. Component dependencies from the same project are included in the bundle. The generated `manifest.json` identifies its scope and component entry points.
+Each `<tag>.js` is a standalone JavaScript module and does not require sibling `runtime.js`, `api.js`, or chunk files. Component dependencies from the same project are included in the bundle. The generated `manifest.json` identifies its scope, component entry points, runtime ABI, and producer version.
+
+### Manifest compatibility
+
+The top-level `version` field is the **manifest schema version**. Schema version 1 is the initial public contract. The compatibility fields are:
+
+- `generatedBy` and `generatedByVersion` — producer identity and package/build version;
+- `runtime` — host runtime filename;
+- `runtimeAbi` — required shared-runtime ABI; generated component code derives the matching symbol as `metaproject.runtime.vN`;
+- `scope` — API/runtime scope for this build;
+- `components.<tag>.file`, `standalone`, and `scope` — component loading metadata.
+
+Consumers may treat additional descriptive component fields such as titles, properties, actions, and dependencies as metadata that can grow additively within schema version 1. Removing a compatibility field or changing its meaning requires a new manifest schema version.
 
 The `index.js` runtime is larger because it includes Lit and the Metaproject data primitives. It is intended to be loaded once by the host, not separately for each library.
 

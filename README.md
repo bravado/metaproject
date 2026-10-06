@@ -297,7 +297,7 @@ Use `all.js` to load the runtime and all local components, or load `index.js` on
 <invoice-list></invoice-list>
 ```
 
-Every independently hosted project must set a unique `scope` in its `metaproject.yaml` (for example `scope: billing`). Distinct component tag names and matching Core runtime versions are also required. See [Shared runtime and remote components](docs/remote-components.md).
+Every independently hosted project must set a unique `scope` in its `metaproject.yaml` (for example `scope: billing`). Distinct component tag names and a compatible runtime ABI are required; exact Metaproject npm package-version equality is not. See [Shared runtime and remote components](docs/remote-components.md).
 
 Node.js/Metaproject is a development/build dependency; the host application does not need a Metaproject server at runtime.
 

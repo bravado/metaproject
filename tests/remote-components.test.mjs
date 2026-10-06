@@ -5,6 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { buildProject } from '../build/index.js';
 
+const packageVersion=JSON.parse(await fs.readFile(new URL('../package.json',import.meta.url),'utf8')).version;
+
 async function fixture(scope,tag) {
   const root=await fs.mkdtemp(path.join(os.tmpdir(),'mp-remote-'));
   await fs.mkdir(path.join(root,'components',tag),{recursive:true});
@@ -57,6 +59,11 @@ test('generated host index contains the runtime; independent components contain 
     assert.doesNotMatch(component,/import .*\.\/runtime\.js/);
     assert.doesNotMatch(component,/from ['"](?:lit|metaproject\/) /);
     assert.match(all,/import '\.\/index\.js'/);
+    assert.equal(manifest.version,1);
+    assert.equal(manifest.generatedBy,'metaproject');
+    assert.equal(manifest.generatedByVersion,packageVersion);
+    assert.equal(manifest.runtime,'index.js');
+    assert.equal(manifest.runtimeAbi,1);
     assert.equal(manifest.scope,'users');
     assert.equal(manifest.components['user-list'].standalone,true);
     assert.equal(result.components.count,1);
@@ -144,6 +151,141 @@ test('actual generated host runtime accepts a separately built component scope',
     assert.equal(host.getDataRuntime('users').operations.listItems.path,'/items');
     assert.equal(host.getDataRuntime('billing').operations.listItems.path,'/items');
     assert.equal(registry.get('invoice-list').prototype.metaprojectScope,'billing');
+  }finally{
+    if(previous.runtime===undefined)delete globalThis[key];else globalThis[key]=previous.runtime;
+    if(previous.elements===undefined)delete globalThis.customElements;else globalThis.customElements=previous.elements;
+    if(previous.HTMLElement===undefined)delete globalThis.HTMLElement;else globalThis.HTMLElement=previous.HTMLElement;
+    if(previous.document===undefined)delete globalThis.document;else globalThis.document=previous.document;
+    await Promise.all([fs.rm(users,{recursive:true,force:true}),fs.rm(billing,{recursive:true,force:true})]);
+  }
+});
+
+
+test('standalone component accepts an existing v1 runtime without version metadata',async()=>{
+  const root=await fixture('users','user-list');
+  const key=Symbol.for('metaproject.runtime.v1');
+  const previous={runtime:globalThis[key],elements:globalThis.customElements};
+  const registered=new Map();
+  try{
+    await buildProject({root});
+    const component=await fs.readFile(path.join(root,'public/components/user-list.js'),'utf8');
+    globalThis[key]={
+      LitElement:class {},html:()=>{},nothing:null,unsafeCSS:css=>css,
+      ResourceContextController:class {},requestResourceContext:()=>{},metaprojectEnvironment:()=>({navigate(){}}),
+      registerMetaprojectScope:()=>{},
+      registerMetaprojectTag:()=>{}
+    };
+    globalThis.customElements={get:tag=>registered.get(tag),define:(tag,klass)=>registered.set(tag,klass)};
+    await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(component)+'#legacy-v1');
+    assert.ok(registered.has('user-list'));
+  }finally{
+    if(previous.runtime===undefined)delete globalThis[key];else globalThis[key]=previous.runtime;
+    if(previous.elements===undefined)delete globalThis.customElements;else globalThis.customElements=previous.elements;
+    await fs.rm(root,{recursive:true,force:true});
+  }
+});
+
+test('standalone component rejects an incompatible runtime ABI clearly',async()=>{
+  const root=await fixture('users','user-list');
+  const v1=Symbol.for('metaproject.runtime.v1');
+  const v2=Symbol.for('metaproject.runtime.v2');
+  const previous={v1:globalThis[v1],v2:globalThis[v2],elements:globalThis.customElements};
+  try{
+    await buildProject({root});
+    const component=await fs.readFile(path.join(root,'public/components/user-list.js'),'utf8');
+    delete globalThis[v1];
+    globalThis[v2]={};
+    globalThis.customElements={get:()=>undefined,define:()=>{}};
+    await assert.rejects(
+      import('data:text/javascript;charset=utf-8,'+encodeURIComponent(component)+'#abi-mismatch'),
+      /Unsupported Metaproject runtime ABI: component requires v1/
+    );
+  }finally{
+    if(previous.v1===undefined)delete globalThis[v1];else globalThis[v1]=previous.v1;
+    if(previous.v2===undefined)delete globalThis[v2];else globalThis[v2]=previous.v2;
+    if(previous.elements===undefined)delete globalThis.customElements;else globalThis.customElements=previous.elements;
+    await fs.rm(root,{recursive:true,force:true});
+  }
+});
+
+test('host runtime rejects conflicting definitions for the same scope',async()=>{
+  const hostRoot=await fixture('users','user-list');
+  const remoteRoot=await fixture('users','user-summary');
+  const key=Symbol.for('metaproject.runtime.v1');
+  const previous={runtime:globalThis[key],elements:globalThis.customElements,HTMLElement:globalThis.HTMLElement,document:globalThis.document};
+  try{
+    const openapiPath=path.join(remoteRoot,'openapi.yaml');
+    const openapi=await fs.readFile(openapiPath,'utf8');
+    await fs.writeFile(openapiPath,openapi.replace('https://users.example.test/api','https://other.example.test/api'));
+    await Promise.all([buildProject({root:hostRoot}),buildProject({root:remoteRoot})]);
+    const hostCode=await fs.readFile(path.join(hostRoot,'public/components/index.js'),'utf8');
+    const remoteCode=await fs.readFile(path.join(remoteRoot,'public/components/user-summary.js'),'utf8');
+    const registry=new Map();
+    globalThis.HTMLElement=class {};
+    globalThis.document={createTreeWalker:()=>({nextNode:()=>null}),createComment:()=>({})};
+    globalThis.customElements={get:tag=>registry.get(tag),define:(tag,ctor)=>registry.set(tag,ctor)};
+    await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(hostCode)+'#scope-host');
+    await assert.rejects(
+      import('data:text/javascript;charset=utf-8,'+encodeURIComponent(remoteCode)+'#scope-remote'),
+      /Metaproject scope collision: users/
+    );
+  }finally{
+    if(previous.runtime===undefined)delete globalThis[key];else globalThis[key]=previous.runtime;
+    if(previous.elements===undefined)delete globalThis.customElements;else globalThis.customElements=previous.elements;
+    if(previous.HTMLElement===undefined)delete globalThis.HTMLElement;else globalThis.HTMLElement=previous.HTMLElement;
+    if(previous.document===undefined)delete globalThis.document;else globalThis.document=previous.document;
+    await Promise.all([fs.rm(hostRoot,{recursive:true,force:true}),fs.rm(remoteRoot,{recursive:true,force:true})]);
+  }
+});
+
+test('host runtime rejects the same component tag from a different scope',async()=>{
+  const users=await fixture('users','shared-list');
+  const billing=await fixture('billing','shared-list');
+  const key=Symbol.for('metaproject.runtime.v1');
+  const previous={runtime:globalThis[key],elements:globalThis.customElements,HTMLElement:globalThis.HTMLElement,document:globalThis.document};
+  try{
+    await Promise.all([buildProject({root:users}),buildProject({root:billing})]);
+    const hostCode=await fs.readFile(path.join(users,'public/components/index.js'),'utf8');
+    const localCode=await fs.readFile(path.join(users,'public/components/shared-list.js'),'utf8');
+    const remoteCode=await fs.readFile(path.join(billing,'public/components/shared-list.js'),'utf8');
+    const registry=new Map();
+    globalThis.HTMLElement=class {};
+    globalThis.document={createTreeWalker:()=>({nextNode:()=>null}),createComment:()=>({})};
+    globalThis.customElements={get:tag=>registry.get(tag),define:(tag,ctor)=>registry.set(tag,ctor)};
+    await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(hostCode)+'#tag-host');
+    await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(localCode)+'#tag-local');
+    await assert.rejects(
+      import('data:text/javascript;charset=utf-8,'+encodeURIComponent(remoteCode)+'#tag-remote'),
+      /Metaproject component tag collision: <shared-list> is already registered for users/
+    );
+  }finally{
+    if(previous.runtime===undefined)delete globalThis[key];else globalThis[key]=previous.runtime;
+    if(previous.elements===undefined)delete globalThis.customElements;else globalThis.customElements=previous.elements;
+    if(previous.HTMLElement===undefined)delete globalThis.HTMLElement;else globalThis.HTMLElement=previous.HTMLElement;
+    if(previous.document===undefined)delete globalThis.document;else globalThis.document=previous.document;
+    await Promise.all([fs.rm(users,{recursive:true,force:true}),fs.rm(billing,{recursive:true,force:true})]);
+  }
+});
+
+test('host runtime rejects a component tag already defined outside Metaproject',async()=>{
+  const users=await fixture('users','user-list');
+  const billing=await fixture('billing','external-list');
+  const key=Symbol.for('metaproject.runtime.v1');
+  const previous={runtime:globalThis[key],elements:globalThis.customElements,HTMLElement:globalThis.HTMLElement,document:globalThis.document};
+  try{
+    await Promise.all([buildProject({root:users}),buildProject({root:billing})]);
+    const hostCode=await fs.readFile(path.join(users,'public/components/index.js'),'utf8');
+    const remoteCode=await fs.readFile(path.join(billing,'public/components/external-list.js'),'utf8');
+    const registry=new Map();
+    globalThis.HTMLElement=class {};
+    globalThis.document={createTreeWalker:()=>({nextNode:()=>null}),createComment:()=>({})};
+    globalThis.customElements={get:tag=>registry.get(tag),define:(tag,ctor)=>registry.set(tag,ctor)};
+    await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(hostCode)+'#external-host');
+    registry.set('external-list',class {});
+    await assert.rejects(
+      import('data:text/javascript;charset=utf-8,'+encodeURIComponent(remoteCode)+'#external-remote'),
+      /Metaproject component tag collision: <external-list> is already defined outside this runtime/
+    );
   }finally{
     if(previous.runtime===undefined)delete globalThis[key];else globalThis[key]=previous.runtime;
     if(previous.elements===undefined)delete globalThis.customElements;else globalThis.customElements=previous.elements;
