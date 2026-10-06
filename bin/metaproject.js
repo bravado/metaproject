@@ -16,8 +16,7 @@ try {
     const { checkProject } = await import('../project/check.js');
     const { root } = parseRootArgs(argv);
     const result=checkProject({root});
-    console.log(`Metaproject check: ${result.errors.length} error(s), ${result.warnings.length} warning(s).`);
-    for(const diagnostic of result.diagnostics){const location=diagnostic.path?` ${diagnostic.path}`:'';console.log(`  ${diagnostic.severity === 'warning' ? 'WARN' : 'ERROR'} ${diagnostic.code}${location}: ${diagnostic.message}`);}
+    printCheckResult(result);
     if(result.errors.length)process.exitCode=1;
   } else if (command === 'build') {
     const { buildProject } = await import('../build/index.js');
@@ -75,7 +74,7 @@ try {
     if (!['help','--help','-h'].includes(command)) process.exitCode = 1;
   }
 } catch (error) {
-  const concise=['ApiCliError','MetaprojectConfigError','OpenApiSupportError'].includes(error?.name);
+  const concise=['ApiCliError','MetaprojectConfigError','OpenApiSupportError','MetaprojectProjectError'].includes(error?.name);
   console.error(concise ? error.message : (error?.stack || error?.message || String(error)));
   process.exitCode = Number.isInteger(error?.exitCode) ? error.exitCode : 1;
 }
@@ -147,18 +146,40 @@ function parseRootArgs(args) {
 
 function printInitResult(result) {
   console.log(`Initialized Metaproject in ${result.root}`);
-  console.log(`  Name: ${result.name}`);
-  if (result.created.length) console.log(`  Created: ${result.created.join(', ')}`);
-  else console.log('  Created: nothing (project was already initialized)');
-  if (result.agents?.changed) console.log('  Agent instructions: AGENTS.md updated');
-  console.log('\nNext:');
-  console.log('  Existing API spec: npx metaproject import-openapi ./path/to/openapi.yaml');
-  console.log('  Existing code/no spec: follow node_modules/metaproject/skills/application-analysis/SKILL.md');
-  console.log('  New project: follow node_modules/metaproject/skills/project-bootstrap/SKILL.md');
-  console.log('  Validate: npx metaproject check');
-  console.log('  Build:    npx metaproject build');
+  console.log(`  Name:      ${result.name}`);
+  if (result.created.length) console.log(`  Created:   ${result.created.join(', ')}`);
+  else console.log('  Created:   nothing (project was already initialized)');
+  if (result.preserved.length) console.log(`  Preserved: ${result.preserved.join(', ')}`);
+  if (result.agents?.changed) console.log('  AGENTS.md: Metaproject managed block updated');
+
+  console.log('\nChoose the path that matches this project:');
+  console.log('  Existing app with OpenAPI:');
+  console.log('    metaproject import-openapi ./path/to/openapi.yaml');
+  console.log('  Existing app without adequate OpenAPI:');
+  console.log('    follow node_modules/metaproject/skills/application-analysis/SKILL.md');
+  console.log('  New app:');
+  console.log('    follow node_modules/metaproject/skills/project-bootstrap/SKILL.md');
+  console.log('\nThen:');
+  console.log('  metaproject check');
+  console.log('  metaproject build');
+}
+
+function printCheckResult(result) {
+  console.log('Metaproject check');
+  console.log(`  Config:     ${result.configPath}`);
+  console.log(`  OpenAPI:    ${result.openapiPath}`);
+  console.log(`  Components: ${result.componentSourceDir} (${result.componentCount} source)`);
+  console.log(`  Scope:      ${result.scope}`);
+  console.log(`  Schemas:    ${result.schemaCount}`);
+  console.log(`  Operations: ${result.operationCount}`);
+  console.log(`  Health:     ${result.errors.length} error(s), ${result.warnings.length} warning(s)`);
+  for(const diagnostic of result.diagnostics){
+    const target=diagnostic.path || diagnostic.sourcePath || diagnostic.resource;
+    const location=target ? ` ${target}` : '';
+    console.log(`  ${diagnostic.severity === 'warning' ? 'WARN' : 'ERROR'} ${diagnostic.code}${location}: ${diagnostic.message}`);
+  }
 }
 
 function printHelp() {
-  console.log(`Metaproject\n\nUsage:\n  metaproject init [project-root] [--name NAME] [--no-agents]\n  metaproject check [project-root]\n  metaproject build [project-root] [--minify] [--sourcemap]\n  metaproject import-openapi SOURCE [project-root] [--force]\n  metaproject api list [project-root]\n  metaproject api show OPERATION [project-root]\n  metaproject api call OPERATION [project-root] [parameters/options]\n  metaproject openapi check-examples [project-root]\n  metaproject openapi upsert-operation --input FILE [project-root]\n  metaproject openapi upsert-schema --input FILE [project-root]\n\n  metaproject --version\n\nSOURCE may be a local YAML/JSON file, file:// URL, or HTTP(S) URL.\n\nTypical setup:\n  npm install --save-dev metaproject\n  npx metaproject init\n  npx metaproject check\n  npx metaproject build\n`);
+  console.log(`Metaproject\n\nUsage:\n  metaproject init [project-root] [--name NAME] [--no-agents]\n  metaproject check [project-root]\n  metaproject build [project-root] [--minify] [--sourcemap]\n  metaproject import-openapi SOURCE [project-root] [--force]\n  metaproject api list [project-root]\n  metaproject api show OPERATION [project-root]\n  metaproject api call OPERATION [project-root] [parameters/options]\n  metaproject openapi check-examples [project-root]\n  metaproject openapi upsert-operation --input FILE [project-root]\n  metaproject openapi upsert-schema --input FILE [project-root]\n\n  metaproject --version\n\nSOURCE may be a local YAML/JSON file, file:// URL, or HTTP(S) URL.\n\nStart here:\n  npm install --save-dev metaproject\n  metaproject init\n\nChoose a project path:\n  Existing app with OpenAPI:\n    metaproject import-openapi ./path/to/openapi.yaml\n  Existing app without adequate OpenAPI:\n    follow node_modules/metaproject/skills/application-analysis/SKILL.md\n  New app:\n    follow node_modules/metaproject/skills/project-bootstrap/SKILL.md\n\nValidate and build:\n  metaproject check\n  metaproject build\n`);
 }
