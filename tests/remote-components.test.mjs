@@ -59,7 +59,7 @@ test('generated host index contains the runtime; independent components contain 
     assert.doesNotMatch(component,/import .*\.\/runtime\.js/);
     assert.doesNotMatch(component,/from ['"](?:lit|metaproject\/) /);
     assert.match(all,/import '\.\/index\.js'/);
-    assert.equal(manifest.version,2);
+    assert.equal(manifest.version,1);
     assert.equal(manifest.generatedBy,'metaproject');
     assert.equal(manifest.generatedByVersion,packageVersion);
     assert.equal(manifest.runtime,'index.js');
