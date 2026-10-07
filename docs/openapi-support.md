@@ -2,7 +2,7 @@
 
 Metaproject Core supports a deliberate subset of OpenAPI 3.0 and 3.1. This document is the compatibility boundary for the 0.11 release.
 
-`npx metaproject check` reports two kinds of support diagnostics:
+`metaproject check` reports two kinds of support diagnostics:
 
 - **error** — Core cannot interpret or serialize the construct deterministically. The normal project/build context rejects it.
 - **warning** — Core can use the contract, but only with the limitation documented below. Warnings do not block a build.
