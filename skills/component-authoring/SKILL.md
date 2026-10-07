@@ -133,6 +133,6 @@ Keep routing, page layout, modal selection, and other application composition ou
 Run:
 
 ```bash
-npx metaproject check
-npx metaproject build
+metaproject check
+metaproject build
 ```
