@@ -1,0 +1,7 @@
+openapi: 3.1.0
+info:
+  title: Remote component host API
+  version: 1.0.0
+servers:
+  - url: /api
+paths: {}
