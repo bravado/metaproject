@@ -1,0 +1,7 @@
+version: 1
+name: Remote component host
+scope: host
+openapi: openapi.yaml
+components:
+  source: components
+  output: public/components
