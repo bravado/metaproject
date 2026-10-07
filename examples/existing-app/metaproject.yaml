@@ -1,0 +1,7 @@
+version: 1
+name: Existing application example
+scope: existing-app
+openapi: docs/openapi.yaml
+components:
+  source: components
+  output: public/components
