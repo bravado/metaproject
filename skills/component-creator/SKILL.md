@@ -1,13 +1,66 @@
 ---
 name: metaproject-component-creator
-description: Create the smallest useful reusable Web Components from modeled OpenAPI operations using data-source, data-table, data-form, semantic data-action events, and data-operation.
+description: Create or update the smallest useful reusable Web Components from modeled OpenAPI operations while preserving deliberate existing behavior.
 ---
 
 # Create Components from OpenAPI
 
-Read the configured OpenAPI document, existing component source, and `skills/component-authoring/SKILL.md`.
+Read the configured OpenAPI document, the configured component source directory, every existing component relevant to the requested workflow, and `skills/component-authoring/SKILL.md` before editing anything.
 
 The output is reusable Web Components. Each component should work in any host application; application routing and layout belong to the host.
+
+## Rerun contract
+
+Treat existing component source as deliberate application code, not disposable generated text.
+
+Before creating a component:
+
+1. inspect existing component HTML, CSS, JavaScript/TypeScript, public properties, semantic `data-action` events, and referenced OpenAPI operations;
+2. reuse or extend an existing component when it already represents the same domain object or user workflow;
+3. create a new component only when the requested behavior is meaningfully separate.
+
+On reruns, make the smallest change required by the current OpenAPI contract and task. Preserve hand-written markup, styles, helper logic, public properties, semantic events, titles, and host-facing behavior unless an API change makes preservation impossible.
+
+Never replace an existing component wholesale just because a simpler generated version could be produced.
+
+## OpenAPI is the operation boundary
+
+Every `request="operationId"` and `data-operation="operationId"` must refer to an operation that already exists in the configured OpenAPI contract.
+
+**Never invent an OpenAPI operation or operationId from component intent.** If the component needs an HTTP capability that is not modeled, stop that component change and update the contract through the appropriate workflow first:
+
+- existing application behavior that is missing/stale: `skills/application-analysis/SKILL.md`;
+- new API/application design: `skills/project-bootstrap/SKILL.md`.
+
+Do not substitute a guessed operation with a similar name.
+
+## Grouping heuristics
+
+Prefer coherent domain/workflow components over one component per OpenAPI operation.
+
+Good boundaries usually represent something a host application can place or reuse directly, for example:
+
+- a user list with row actions;
+- a user editor that reads and updates one user;
+- an order summary that combines the small set of reads needed for that summary.
+
+Operations are implementation capabilities, not component boundaries. A list/get/update trio may naturally become two components (`user-list`, `user-editor`) rather than three components.
+
+Split components when they have distinct host-facing purpose, independent reuse, substantially different public inputs/events, or would otherwise become difficult to understand.
+
+## Operation evolution
+
+When the OpenAPI contract changes:
+
+- **operation added:** use it only when it belongs to an existing component's workflow; otherwise create a separate component only if there is a distinct reusable UI purpose;
+- **operation changed:** update request/parameter/body bindings while preserving the component's public properties, semantic events, CSS, helper code, and authored structure where possible;
+- **operation renamed with the same behavior:** update the internal operation reference, but do not rename the component or its public contract just to mirror the new operationId;
+- **operation removed:** remove or replace references only when the contract provides a valid replacement. If required behavior no longer has an operation, do not invent one; report the contract/component mismatch;
+- **response/schema changed:** adapt the smallest affected rendering/form behavior and preserve unrelated authored markup and events.
+
+If an API change truly requires a breaking component change, make that change explicit in the work summary instead of silently changing the public component contract.
+
+## Component patterns
 
 Prefer a few domain components over abstraction layers. Put component context in `<title>` metadata instead of rendering duplicate headings.
 
@@ -64,11 +117,13 @@ Rules:
 - keep property examples small so development previews are useful;
 - never generate cache keys, refresh tokens, custom invalidation events, or Promise composition loaders.
 
+See `docs/openapi-component-workflow.md` for a small OpenAPI → component example that also demonstrates rerun preservation.
+
 Finish with:
 
 ```bash
-npx metaproject check
-npx metaproject build
+metaproject check
+metaproject build
 ```
 
 ## Standalone component distribution
