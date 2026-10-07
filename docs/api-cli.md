@@ -7,7 +7,7 @@ The CLI is intentionally a thin curl-like layer rather than an API client worksp
 ## List operations
 
 ```bash
-npx metaproject api list
+metaproject api list
 ```
 
 Example:
@@ -24,7 +24,7 @@ Use `--root DIR` or a positional project root when calling another Metaproject p
 ## Inspect one operation
 
 ```bash
-npx metaproject api show getUser
+metaproject api show getUser
 ```
 
 The output includes the method, path, default server, declared parameters, and request-body content types.
@@ -34,20 +34,20 @@ The output includes the method, path, default server, declared parameters, and r
 OpenAPI path, query, and header parameters become CLI flags using their declared names:
 
 ```bash
-npx metaproject api call getUser --id 123
-npx metaproject api call listUsers --page 2 --limit 20
+metaproject api call getUser --id 123
+metaproject api call listUsers --page 2 --limit 20
 ```
 
 Repeated flags are passed as arrays, which is useful for array query parameters:
 
 ```bash
-npx metaproject api call searchUsers --tag admin --tag active
+metaproject api call searchUsers --tag admin --tag active
 ```
 
 If an OpenAPI parameter name conflicts with a CLI option, use `--param NAME=VALUE`:
 
 ```bash
-npx metaproject api call example --param server=production
+metaproject api call example --param server=production
 ```
 
 ## Request bodies
@@ -55,20 +55,20 @@ npx metaproject api call example --param server=production
 For operations with a request body:
 
 ```bash
-npx metaproject api call createUser \
+metaproject api call createUser \
   --body '{"name":"Ada","email":"ada@example.com"}'
 ```
 
 Read from a file:
 
 ```bash
-npx metaproject api call createUser --body @user.json
+metaproject api call createUser --body @user.json
 ```
 
 Or stdin:
 
 ```bash
-cat user.json | npx metaproject api call createUser --body -
+cat user.json | metaproject api call createUser --body -
 ```
 
 JSON bodies are validated before the request is sent. The first declared OpenAPI request content type is used as `Content-Type` unless a header override is supplied.
@@ -80,7 +80,7 @@ By default the CLI uses the first resolved top-level OpenAPI `servers` entry, co
 A command-line HTTP client needs an absolute URL. If the OpenAPI server is relative, such as `/api`, override it:
 
 ```bash
-npx metaproject api call listUsers \
+metaproject api call listUsers \
   --server http://localhost:3000/api
 ```
 
@@ -91,7 +91,7 @@ The CLI does not introduce another API-root setting in `metaproject.yaml`.
 Add arbitrary headers with curl-style `-H`:
 
 ```bash
-npx metaproject api call listUsers \
+metaproject api call listUsers \
   -H 'Authorization: Bearer token'
 ```
 
@@ -102,7 +102,7 @@ OpenAPI-declared header parameters can also be supplied through their generated 
 By default only the response body is written to stdout, so the command composes naturally with tools such as `jq`:
 
 ```bash
-npx metaproject api call listUsers | jq '.items[]'
+metaproject api call listUsers | jq '.items[]'
 ```
 
 Useful options:
