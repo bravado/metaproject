@@ -1,6 +1,6 @@
 ---
 name: metaproject-application-analysis
-description: Analyze an existing application without a sufficient API contract, model its browser-facing HTTP capabilities in OpenAPI, add representative examples, then generate reusable Web Components.
+description: Analyze an existing application without a sufficient API contract, make focused OpenAPI updates for browser-facing behavior, then generate reusable Web Components.
 ---
 
 # Analyze an Existing Application
@@ -25,6 +25,21 @@ reusable Web Components
 
 Do not model every controller/service method. Model stable HTTP capabilities that a browser component should consume.
 
+## Rerun and preservation contract
+
+Always read the configured OpenAPI contract before analyzing source. Build a short inventory of operations/schemas that already cover the requested workflow and classify each as **current**, **missing**, or **stale**.
+
+On reruns:
+
+- leave current operations and schemas unchanged;
+- add only missing browser-facing capabilities;
+- update only stale fields whose behavior is contradicted by application source/tests or the task;
+- preserve existing stable `operationId` and `x-project-id` values when the same capability still exists;
+- preserve descriptions, examples, security metadata, extensions, and schema details that are not made stale by the discovered behavior;
+- do not broadly regenerate or reformat the whole OpenAPI document as a side effect of modeling one workflow.
+
+If an endpoint was removed from the application, confirm it is genuinely gone before removing its contract entry. If the intended replacement is unclear, report the discrepancy rather than guessing.
+
 ## What to inspect
 
 Read `metaproject.yaml`, the configured OpenAPI file, existing `components/`, and only the application source needed to understand browser-visible behavior. Depending on the stack, inspect:
@@ -42,32 +57,33 @@ Ignore dependencies, caches, generated component output, uploads, and unrelated 
 ## Process
 
 1. Identify the first complete user workflow to model.
-2. List the HTTP requests the browser needs for that workflow.
-3. Reuse existing operations/schemas when they already describe the behavior correctly.
-4. Add or update schemas and operations in the configured OpenAPI document.
-5. Use deterministic mutation commands rather than fragile YAML surgery when practical:
+2. Compare that workflow with the configured OpenAPI contract before changing it.
+3. List the HTTP requests the browser needs for that workflow.
+4. Reuse existing operations/schemas when they already describe the behavior correctly.
+5. Add missing resources or update only stale resources in the configured OpenAPI document.
+6. Use deterministic mutation commands rather than fragile YAML surgery when practical:
 
 ```bash
-npx metaproject openapi upsert-schema --input /tmp/schema.json
-npx metaproject openapi upsert-operation --input /tmp/operation.json
+metaproject openapi upsert-schema --input /tmp/schema.json
+metaproject openapi upsert-operation --input /tmp/operation.json
 ```
 
-6. Every operation must have:
+7. Every new or updated operation must have:
    - HTTP method and path;
    - stable `operationId`;
    - stable `x-project-id`;
    - path/query/header parameters and request body when applicable;
    - success response schema;
    - representative success example when the response has content.
-7. Every reusable schema under `components.schemas` must have a stable `x-project-id`.
-8. Validate:
+8. Every reusable schema under `components.schemas` must have a stable `x-project-id`.
+9. Validate:
 
 ```bash
-npx metaproject openapi check-examples
-npx metaproject check
+metaproject openapi check-examples
+metaproject check
 ```
 
-9. Then follow `node_modules/metaproject/skills/component-creator/SKILL.md`.
+10. Then follow `node_modules/metaproject/skills/component-creator/SKILL.md`.
 
 ## Examples are development data
 
@@ -99,4 +115,4 @@ The matcher may use request-shaped `path`, `query`, `headers`, or `body` subsets
 
 ## When source and contract disagree
 
-Do not silently guess. Prefer the behavior actually exposed to browser clients, document the discrepancy in your work summary, and update the contract only when the intended behavior is clear from source/tests or the task requirements.
+Do not silently guess. Prefer the behavior actually exposed to browser clients, document the discrepancy in your work summary, and update only the contract pieces whose intended behavior is clear from source/tests or the task requirements.
