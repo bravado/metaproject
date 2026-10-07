@@ -20,9 +20,104 @@ Web Components usable by any application
 
 The generated components are ordinary browser custom elements. Use them in plain HTML/JavaScript, Lit, framework wrappers, or server-rendered applications.
 
-## Node.js support
+## 5-minute first success
 
-Metaproject 0.11.x supports Node.js **22.12.0 and newer maintained releases**. CI exercises the exact minimum (22.12.0), Node 24 LTS, and the current Node 26 line. Node 20 is not supported by the 0.11.x release line.
+Install Metaproject as a development dependency, then initialize a project:
+
+```bash
+npm install --save-dev metaproject
+metaproject init
+```
+
+Documentation examples use the canonical `metaproject` executable name. For a local npm install whose `node_modules/.bin` is not on your shell `PATH`, run the same command as `npm exec -- metaproject ...`.
+
+Model one browser-facing operation in `openapi.yaml`:
+
+```yaml
+openapi: 3.1.0
+info:
+  title: Example API
+  version: 1.0.0
+servers:
+  - url: /api
+paths:
+  /users:
+    get:
+      operationId: listUsers
+      x-project-id: op-list-users
+      responses:
+        '200':
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+              example:
+                - { id: 1, name: Ada }
+components:
+  schemas:
+    User:
+      x-project-id: schema-user
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+      required: [id, name]
+```
+
+Or, if the application already has a bundled OpenAPI document, import it instead:
+
+```bash
+metaproject import-openapi ./docs/openapi.yaml
+```
+
+Create `components/user-list/component.html`:
+
+```html
+<title>Users</title>
+
+<data-source request="listUsers">
+  <data-table>
+    <button data-action="open-user">Open</button>
+  </data-table>
+</data-source>
+```
+
+Validate and build:
+
+```bash
+metaproject check
+metaproject build
+```
+
+Embed the generated component in any HTML host:
+
+```html
+<script type="module" src="/components/all.js"></script>
+<user-list id="users"></user-list>
+
+<script type="module">
+  document.querySelector('#users').addEventListener('open-user', event => {
+    console.log(event.detail.resource);
+  });
+</script>
+```
+
+The repository's [vanilla example](examples/vanilla/) is this flow as a runnable local application with a deterministic API.
+
+## Compatibility
+
+| Boundary | 0.11.x policy |
+| --- | --- |
+| Node.js | Node **22.12.0+** on maintained Node release lines; CI covers 22.12.0, 24, and 26. |
+| OpenAPI | OpenAPI 3.0/3.1 within Core's documented [supported subset](docs/openapi-support.md). |
+| Browser output | Native ES modules targeting **ES2022**; requires modern Custom Elements, Shadow DOM, modules, and `fetch` support. |
+| Vite | `metaproject/vite` is an optional experimental integration with Vite **6+**. Prefer static `metaproject build` output for framework-independent assets and remote-component distribution. |
+| Shared runtime | 0.11 uses runtime ABI **v1**, identified by `Symbol.for('metaproject.runtime.v1')`; compatible host/component builds do not require exact npm-version equality. |
+
+See [JavaScript API and compatibility](docs/public-api.md), [OpenAPI support](docs/openapi-support.md), and [shared runtime/remote components](docs/remote-components.md) for the detailed boundaries.
 
 ## Project shape
 
@@ -66,7 +161,7 @@ The OpenAPI path and component directories are configurable.
 
 ```bash
 npm install --save-dev metaproject
-npx metaproject init
+metaproject init
 ```
 
 Then design the browser-facing API contract and create components. See [Getting started from scratch](docs/getting-started.md) or give your coding agent:
@@ -80,10 +175,10 @@ node_modules/metaproject/skills/project-bootstrap/SKILL.md
 Initialize Metaproject, then import a bundled OpenAPI 3.0/3.1 YAML/JSON file or URL within Core's supported subset:
 
 ```bash
-npx metaproject init
-npx metaproject import-openapi ./docs/openapi.yaml
+metaproject init
+metaproject import-openapi ./docs/openapi.yaml
 # or
-npx metaproject import-openapi https://example.test/openapi.json
+metaproject import-openapi https://example.test/openapi.json
 ```
 
 For an existing multi-file local specification, you can keep it in place and configure:
@@ -238,14 +333,14 @@ Metaproject keeps the API contract deterministic and useful for development prev
 
 ```bash
 # validate representative response examples
-npx metaproject openapi check-examples
+metaproject openapi check-examples
 
 # create/update modeled resources from JSON input
-npx metaproject openapi upsert-schema --input schema.json
-npx metaproject openapi upsert-operation --input operation.json
+metaproject openapi upsert-schema --input schema.json
+metaproject openapi upsert-operation --input operation.json
 
 # import an existing bundled YAML/JSON contract
-npx metaproject import-openapi SOURCE
+metaproject import-openapi SOURCE
 ```
 
 Every modeled operation should have a stable `operationId` and `x-project-id`; reusable schemas should have stable `x-project-id` values. Operations with response bodies should have small representative success examples.
@@ -255,10 +350,10 @@ Every modeled operation should have a stable `operationId` and `x-project-id`; r
 The CLI can execute modeled operations directly by `operationId` using the same operation metadata and REST client semantics as generated components:
 
 ```bash
-npx metaproject api list
-npx metaproject api show getUser
-npx metaproject api call getUser --id 123
-npx metaproject api call createUser --body @user.json
+metaproject api list
+metaproject api show getUser
+metaproject api call getUser --id 123
+metaproject api call createUser --body @user.json
 ```
 
 Path, query, and header parameters become `--PARAM` flags. Use `-H` for arbitrary headers and `--server` to override the first OpenAPI server. Relative OpenAPI server URLs require an absolute `--server` value when called from the CLI.
@@ -268,7 +363,7 @@ See [Calling OpenAPI operations from the CLI](docs/api-cli.md).
 ## Validate the complete project
 
 ```bash
-npx metaproject check
+metaproject check
 ```
 
 `check` validates the shared project model without building assets: OpenAPI resources, examples, component parsing, operation references, duplicate IDs/tags, and related contract diagnostics.
@@ -284,7 +379,7 @@ The runtime entry points `metaproject/components` and `metaproject/data-source` 
 ## Build
 
 ```bash
-npx metaproject build
+metaproject build
 ```
 
 The build emits a shared host runtime and independently loadable browser-native component bundles:
@@ -326,7 +421,7 @@ Core ships focused skills instead of one monolithic workflow:
 - `skills/component-creator/SKILL.md` — generate the smallest useful reusable Web Components from modeled operations;
 - `skills/component-authoring/SKILL.md` — edit HTML-first components and Core primitives directly.
 
-`npx metaproject init` can add a bounded `AGENTS.md` section that routes coding agents to the right workflow.
+`metaproject init` can add a bounded `AGENTS.md` section that routes coding agents to the right workflow.
 
 ## Documentation
 
@@ -338,7 +433,9 @@ Core ships focused skills instead of one monolithic workflow:
 - [Adopting an existing application](docs/adopting-existing-application.md)
 - [Core data-source](docs/data-source.md)
 - [Calling OpenAPI operations from the CLI](docs/api-cli.md)
+- [CLI reference](docs/cli-reference.md)
 - [Using generated components](docs/using-components.md)
 - [Shared runtime and remote components](docs/remote-components.md)
 - [OpenAPI → component workflow](docs/openapi-component-workflow.md)
 - [Runnable product examples](examples/)
+- [Migrating to 0.11](docs/migrating-to-0.11.md)
