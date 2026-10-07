@@ -6,8 +6,10 @@ This path is for a new application or a new API/UI surface where you control the
 
 ```bash
 npm install --save-dev metaproject
-npx metaproject init
+metaproject init
 ```
+
+These docs use the canonical `metaproject` executable name. With a local npm installation, use `npm exec -- metaproject ...` when `node_modules/.bin` is not on your shell `PATH`.
 
 This creates the Core-owned project foundation without imposing a frontend application framework:
 
@@ -99,8 +101,8 @@ components:
 For deterministic agent/tool updates you can use:
 
 ```bash
-npx metaproject openapi upsert-schema --input schema.json
-npx metaproject openapi upsert-operation --input operation.json
+metaproject openapi upsert-schema --input schema.json
+metaproject openapi upsert-operation --input operation.json
 ```
 
 If the API requires authentication, describe it with standard OpenAPI `components.securitySchemes` and `security`. Keep credentials out of the specification; they are runtime/application configuration.
@@ -130,8 +132,8 @@ The component does not know what route/page/modal should open. It emits the sema
 ## 5. Validate
 
 ```bash
-npx metaproject openapi check-examples
-npx metaproject check
+metaproject openapi check-examples
+metaproject check
 ```
 
 `metaproject check` validates the OpenAPI/component relationship model and reports missing operations, invalid component source, duplicate IDs, example problems, and related project diagnostics without producing build output.
@@ -139,7 +141,7 @@ npx metaproject check
 ## 6. Build
 
 ```bash
-npx metaproject build
+metaproject build
 ```
 
 The default output is:
@@ -152,7 +154,6 @@ public/components/
   api.js
   user-list.js
   manifest.json
-  ...generated chunks
 ```
 
 ## 7. Use the Web Component
