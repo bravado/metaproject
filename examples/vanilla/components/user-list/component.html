@@ -1,0 +1,8 @@
+<title>Users</title>
+<component-property name="limit" type="integer" default="2" example="2"></component-property>
+
+<data-source request="listUsers" limit=${limit}>
+  <data-table>
+    <button data-action="select-user">Select</button>
+  </data-table>
+</data-source>
