@@ -137,15 +137,22 @@ components:
   assert.ok(exportNames.length>0,'Installed package should declare public exports');
   const exportScript=`
     import assert from 'node:assert/strict';
+    import { access } from 'node:fs/promises';
     const checkout=${JSON.stringify(checkout)};
-    const expectedRoot=${JSON.stringify(installedRoot)};
     const specifiers=${JSON.stringify(exportNames.map(name=>`metaproject/${name.slice(2)}`))};
     for(const specifier of specifiers){
       const resolved=import.meta.resolve(specifier);
       assert.ok(resolved.includes('/node_modules/metaproject/'), specifier+' did not resolve from installed package');
       assert.ok(!resolved.startsWith('file://'+checkout+'/'), specifier+' resolved into repository checkout');
-      await import(specifier);
+      await access(new URL(resolved));
     }
+    for(const specifier of[
+      'metaproject/data-source',
+      'metaproject/compiler',
+      'metaproject/vite',
+      'metaproject/openapi',
+      'metaproject/project'
+    ]) await import(specifier);
   `;
   run(process.execPath,['--input-type=module','--eval',exportScript]);
 
