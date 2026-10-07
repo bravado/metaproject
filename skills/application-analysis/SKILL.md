@@ -42,7 +42,7 @@ If an endpoint was removed from the application, confirm it is genuinely gone be
 
 ## What to inspect
 
-Read `metaproject.yaml`, the configured OpenAPI file, existing `components/`, and only the application source needed to understand browser-visible behavior. Depending on the stack, inspect:
+Read `metaproject.yaml`, the configured OpenAPI file, the configured component source directory, and only the application source needed to understand browser-visible behavior. Depending on the stack, inspect:
 
 - route/router definitions;
 - controllers/handlers/actions;
