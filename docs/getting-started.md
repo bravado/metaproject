@@ -185,3 +185,4 @@ Continue with:
 - [architecture.md](architecture.md)
 - [data-source.md](data-source.md)
 - [using-components.md](using-components.md)
+For a complete runnable version of this flow, see the [plain HTML example](../examples/vanilla/).
