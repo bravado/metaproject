@@ -89,3 +89,4 @@ import * as metaproject from 'metaproject'; // not supported
 ```
 
 Choose the subpath matching the environment and responsibility instead. This keeps browser code from accidentally depending on filesystem/build tooling and prevents unrelated APIs from becoming coupled through one compatibility surface.
+The [Vite example](../examples/vite/) demonstrates the public `metaproject/vite` integration and explains when to prefer it over static `metaproject build` output.
