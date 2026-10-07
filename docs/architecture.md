@@ -136,7 +136,7 @@ API mutations are distinct from application intent. `data-operation` invokes Ope
 
 ## Build boundary
 
-`npx metaproject build` produces a shared host runtime and independently loadable browser-native component modules in the configured component output directory. The output includes:
+`metaproject build` produces a shared host runtime and independently loadable browser-native component modules in the configured component output directory. The output includes:
 
 - operation metadata (`api.js`);
 - the shared host runtime (`index.js`) with the base data components and scoped operation registry;
