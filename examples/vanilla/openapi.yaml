@@ -1,0 +1,38 @@
+openapi: 3.1.0
+info:
+  title: Vanilla example API
+  version: 1.0.0
+servers:
+  - url: /api
+paths:
+  /users:
+    get:
+      operationId: listUsers
+      x-project-id: op-list-users
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+              example:
+                - { id: 1, name: Ada }
+                - { id: 2, name: Grace }
+components:
+  schemas:
+    User:
+      x-project-id: schema-user
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+      required: [id, name]
