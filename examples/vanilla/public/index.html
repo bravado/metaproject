@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Metaproject vanilla example</title>
+</head>
+<body>
+  <h1>Vanilla host</h1>
+  <p>This heading and the controls below belong to the host application.</p>
+
+  <user-list id="users" limit="2"></user-list>
+  <p id="selection">Select a user from the table.</p>
+  <button id="show-three" type="button">Show three users</button>
+
+  <script type="module" src="/components/all.js"></script>
+  <script type="module">
+    const users = document.querySelector('#users');
+    const selection = document.querySelector('#selection');
+
+    users.addEventListener('select-user', event => {
+      selection.textContent = `Selected: ${event.detail.resource.name}`;
+    });
+
+    document.querySelector('#show-three').addEventListener('click', () => {
+      users.limit = 3;
+    });
+  </script>
+</body>
+</html>
