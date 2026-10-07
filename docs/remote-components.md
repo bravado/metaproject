@@ -100,3 +100,4 @@ mp.configureMetaproject({
 ```
 
 The override invalidates only that scope's cache. Other components retain their API clients, operation IDs, and cache entries. Data loaded within a generated component is isolated by its own scope unless a source explicitly sets another scope.
+See the [remote component example](../examples/remote-component/) for a runnable two-origin setup with one host runtime, a unique remote scope, CORS, and a remote API.

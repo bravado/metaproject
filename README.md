@@ -104,6 +104,17 @@ node_modules/metaproject/skills/application-analysis/SKILL.md
 
 The skill models the browser-facing HTTP capabilities in OpenAPI first, then hands off to component creation. It does not attempt to model every source-code method.
 
+## Runnable examples
+
+The repository includes small product examples that can be run directly:
+
+- [Plain HTML / static build](examples/vanilla/) — local API, `all.js`, public property/attribute input, and a semantic `data-action` event.
+- [Remote component](examples/remote-component/) — one host runtime plus a second-origin component/API registered under its own scope.
+- [Existing application](examples/existing-app/) — keep existing server-rendered routes, OpenAPI, backend, and public web root while adding generated components.
+- [Vite integration](examples/vite/) — compile component source inside an existing Vite-owned application bundle.
+
+Start with the vanilla example if you want to see the complete contract → build → browser flow with no external service.
+
 ## Core component model
 
 A read component can be very small:
@@ -330,3 +341,4 @@ Core ships focused skills instead of one monolithic workflow:
 - [Using generated components](docs/using-components.md)
 - [Shared runtime and remote components](docs/remote-components.md)
 - [OpenAPI → component workflow](docs/openapi-component-workflow.md)
+- [Runnable product examples](examples/)

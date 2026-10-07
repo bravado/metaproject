@@ -1,0 +1,31 @@
+openapi: 3.1.0
+info:
+  title: Existing application API
+  version: 1.0.0
+servers:
+  - url: /api
+paths:
+  /customers:
+    get:
+      operationId: listCustomers
+      x-project-id: op-list-customers
+      responses:
+        '200':
+          description: Customers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Customer'
+              example:
+                - { id: 1, name: Existing Customer }
+components:
+  schemas:
+    Customer:
+      x-project-id: schema-customer
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+      required: [id, name]

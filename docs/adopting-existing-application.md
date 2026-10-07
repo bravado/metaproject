@@ -146,4 +146,4 @@ npx metaproject build
 ```
 
 You may also make the build part of the application's normal asset build/deployment. Generated files should generally be treated as build output rather than hand-maintained source.
-
+See the [existing application example](../examples/existing-app/) for a runnable server-rendered host that keeps its own routes, API, templates, and public web root.

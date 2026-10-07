@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Metaproject remote component example</title>
+</head>
+<body>
+  <h1>Host application</h1>
+  <invoice-list></invoice-list>
+
+  <script type="module">
+    await import('/components/index.js');
+    await import('http://127.0.0.1:4174/components/invoice-list.js');
+  </script>
+</body>
+</html>

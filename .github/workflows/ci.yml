@@ -53,6 +53,9 @@ jobs:
       - name: Syntax check
         run: npm run check
 
+      - name: Verify product examples
+        run: npm run test:examples
+
       - name: Pack npm artifact
         run: |
           mkdir -p dist
