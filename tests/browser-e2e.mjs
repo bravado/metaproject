@@ -83,7 +83,7 @@ async function testSemanticEventFlow(page){
     },{once:true});
   });
 
-  await page.locator('user-list button[data-action="select-user"]').first().click();
+  await page.locator('user-list table button[data-action="select-user"]').first().click();
   await page.waitForFunction(()=>window.__semanticEvents?.length===1);
   const [event]=await page.evaluate(()=>window.__semanticEvents);
   assert.equal(event.bubbles,true);
