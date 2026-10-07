@@ -20,6 +20,10 @@ Web Components usable by any application
 
 The generated components are ordinary browser custom elements. Use them in plain HTML/JavaScript, Lit, framework wrappers, or server-rendered applications.
 
+## Node.js support
+
+Metaproject 0.11.x supports Node.js **22.12.0 and newer maintained releases**. CI exercises the exact minimum (22.12.0), Node 24 LTS, and the current Node 26 line. Node 20 is not supported by the 0.11.x release line.
+
 ## Project shape
 
 A minimal project is:
