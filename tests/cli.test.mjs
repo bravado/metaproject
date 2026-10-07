@@ -14,11 +14,20 @@ test('CLI init works without loading build dependencies and initializes a checka
     const init=spawnSync(process.execPath,[bin,'init',root],{encoding:'utf8'});
     assert.equal(init.status,0,init.stderr);
     assert.match(init.stdout,/Initialized Metaproject/);
-    assert.match(init.stdout,/Existing API spec:/);
+    assert.match(init.stdout,/Existing app with OpenAPI:/);
+    assert.match(init.stdout,/Existing app without adequate OpenAPI:/);
+    assert.match(init.stdout,/New app:/);
     assert.match(init.stdout,/metaproject check/);
+    assert.doesNotMatch(init.stdout,/npx metaproject/);
     const check=spawnSync(process.execPath,[bin,'check',root],{encoding:'utf8'});
     assert.equal(check.status,0,check.stderr);
-    assert.match(check.stdout,/0 error\(s\)/);
+    assert.match(check.stdout,/Config:\s+metaproject\.yaml/);
+    assert.match(check.stdout,/OpenAPI:\s+openapi\.yaml/);
+    assert.match(check.stdout,/Components:\s+components \(0 source\)/);
+    assert.match(check.stdout,/Scope:\s+default/);
+    assert.match(check.stdout,/Schemas:\s+0/);
+    assert.match(check.stdout,/Operations:\s+0/);
+    assert.match(check.stdout,/Health:\s+0 error\(s\), 0 warning\(s\)/);
   }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
 
@@ -33,6 +42,84 @@ test('CLI help exposes adoption and build tools',()=>{
   assert.match(help.stdout,/metaproject api list/);
   assert.match(help.stdout,/metaproject api show OPERATION/);
   assert.match(help.stdout,/metaproject api call OPERATION/);
+  assert.match(help.stdout,/Existing app with OpenAPI:/);
+  assert.match(help.stdout,/Existing app without adequate OpenAPI:/);
+  assert.match(help.stdout,/New app:/);
+  assert.doesNotMatch(help.stdout,/npx metaproject/);
+});
+
+
+test('CLI check reports project health and source counts',()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'metaproject-cli-health-'));
+  try {
+    fs.mkdirSync(path.join(root,'components','user-list'),{recursive:true});
+    fs.writeFileSync(path.join(root,'metaproject.yaml'),`version: 1
+name: Health
+scope: billing
+openapi: openapi.yaml
+components:
+  source: components
+  output: public/components
+`);
+    fs.writeFileSync(path.join(root,'openapi.yaml'),`openapi: 3.1.0
+info:
+  title: Health API
+  version: 1.0.0
+servers:
+  - url: /api
+paths:
+  /users:
+    get:
+      operationId: listUsers
+      x-project-id: op-list-users
+      responses:
+        '200':
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+              example:
+                - {id: 1}
+components:
+  schemas:
+    User:
+      x-project-id: schema-user
+      type: object
+      properties:
+        id: {type: integer}
+      required: [id]
+`);
+    fs.writeFileSync(path.join(root,'components','user-list','component.html'),'<title>Users</title><data-source request="listUsers"><data-table></data-table></data-source>');
+
+    const check=spawnSync(process.execPath,[bin,'check',root],{encoding:'utf8'});
+    assert.equal(check.status,0,check.stderr);
+    assert.match(check.stdout,/Config:\s+metaproject\.yaml/);
+    assert.match(check.stdout,/OpenAPI:\s+openapi\.yaml/);
+    assert.match(check.stdout,/Components:\s+components \(1 source\)/);
+    assert.match(check.stdout,/Scope:\s+billing/);
+    assert.match(check.stdout,/Schemas:\s+1/);
+    assert.match(check.stdout,/Operations:\s+1/);
+    assert.match(check.stdout,/Health:\s+0 error\(s\), 0 warning\(s\)/);
+  } finally {
+    fs.rmSync(root,{recursive:true,force:true});
+  }
+});
+
+test('CLI check tells an uninitialized project exactly how to initialize',()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'metaproject-cli-uninitialized-'));
+  try {
+    const check=spawnSync(process.execPath,[bin,'check',root],{encoding:'utf8'});
+    assert.equal(check.status,1);
+    assert.match(check.stderr,/Metaproject project is not initialized/);
+    assert.match(check.stderr,/Run: metaproject init/);
+    assert.doesNotMatch(check.stderr,/npx metaproject init/);
+    assert.doesNotMatch(check.stderr,/\n\s+at /);
+  } finally {
+    fs.rmSync(root,{recursive:true,force:true});
+  }
 });
 
 

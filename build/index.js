@@ -81,11 +81,11 @@ export function discoverProjectComponents(root,sourceDir=DEFAULT_COMPONENT_SOURC
 export function loadProjectBuildContext(root=process.cwd(),{allowUnsupported=false}={}){
   root=path.resolve(root);
   const configPath=path.join(root,'metaproject.yaml');
-  if(!fs.existsSync(configPath))throw new Error(`Metaproject project not found: ${configPath}. Run "npx metaproject init" first.`);
+  if(!fs.existsSync(configPath)){const error=new Error(`Metaproject project is not initialized at ${root}.\nRun: metaproject init`);error.name='MetaprojectProjectError';throw error;}
   const config=parseMetaprojectConfig(fs.readFileSync(configPath,'utf8'),{filePath:'metaproject.yaml'});
   const openapiPath=normalizeProjectPath(config.openapi||DEFAULT_OPENAPI_PATH);
   const openapiAbsolute=safeProjectPath(root,openapiPath);
-  if(!fs.existsSync(openapiAbsolute))throw new Error(`OpenAPI file not found: ${openapiPath}. Run "npx metaproject init" first.`);
+  if(!fs.existsSync(openapiAbsolute)){const error=new Error(`Configured OpenAPI file not found: ${openapiPath}.\nCheck metaproject.yaml or run: metaproject init`);error.name='MetaprojectProjectError';throw error;}
   const openapi=parseDocument(fs.readFileSync(openapiAbsolute,'utf8'),openapiPath)||{};
   const rawSupportDiagnostics=validateOpenApiSupport(openapi);
   const remoteRefErrors=rawSupportDiagnostics.filter(item=>item.severity==='error'&&item.code==='unsupported-remote-ref');

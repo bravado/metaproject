@@ -60,7 +60,7 @@ Choose the workflow that matches the task:
 - Generate components from an already-modeled API: \`node_modules/metaproject/skills/component-creator/SKILL.md\`
 - Edit component source directly: \`node_modules/metaproject/skills/component-authoring/SKILL.md\`
 
-Keep OpenAPI success examples small and representative. Prefer semantic \`data-action\` events so generated Web Components remain reusable in any host application. Run \`npx metaproject check\` before \`npx metaproject build\`.
+Keep OpenAPI success examples small and representative. Prefer semantic \`data-action\` events so generated Web Components remain reusable in any host application. Run \`metaproject check\` before \`metaproject build\`.
 ${AGENTS_MARKER_END}
 `;
 
