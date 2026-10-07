@@ -23,7 +23,7 @@ Metaproject data-source + compiler
 reusable Web Components
 ```
 
-Do not model every controller/service method. Model stable HTTP capabilities that a browser component should consume.
+Do not model every controller/service method. Model only the stable browser-facing HTTP capabilities that a browser component should consume.
 
 ## Rerun and preservation contract
 
