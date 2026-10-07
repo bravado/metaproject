@@ -64,4 +64,4 @@ Invalid metaproject.yaml configuration:
   - components.soruce: unknown configuration field. Supported fields: source, output, output_api.
 ```
 
-Fix the configuration and rerun `npx metaproject check` before building.
+Fix the configuration and rerun `metaproject check` before building.
