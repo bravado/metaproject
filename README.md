@@ -325,3 +325,4 @@ Core ships focused skills instead of one monolithic workflow:
 - [Calling OpenAPI operations from the CLI](docs/api-cli.md)
 - [Using generated components](docs/using-components.md)
 - [Shared runtime and remote components](docs/remote-components.md)
+- [OpenAPI → component workflow](docs/openapi-component-workflow.md)
