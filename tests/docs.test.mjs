@@ -58,3 +58,23 @@ test('package ships focused architecture, adoption, runtime, and host integratio
   assert.match(apiCli,/operationId/);
   assert.match(apiCli,/--server/);
 });
+
+test('public documentation contains only the current contract, not migration guidance',async()=>{
+  const docs=[
+    'README.md',
+    'docs/architecture.md',
+    'docs/configuration.md',
+    'docs/getting-started.md',
+    'docs/openapi-support.md',
+    'docs/public-api.md',
+    'docs/remote-components.md',
+    'docs/using-components.md'
+  ];
+  for(const file of docs){
+    const source=await read(file);
+    assert.doesNotMatch(source,/\b(?:migration|legacy|deprecated)\b/i,file);
+    assert.doesNotMatch(source,/\bapi_root\b/,file);
+    assert.doesNotMatch(source,/\bupsert-entity\b/,file);
+    assert.doesNotMatch(source,/\bruntime\.js\b/,file);
+  }
+});

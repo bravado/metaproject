@@ -59,6 +59,7 @@ test('generated host index contains the runtime; independent components contain 
     assert.doesNotMatch(component,/import .*\.\/runtime\.js/);
     assert.doesNotMatch(component,/from ['"](?:lit|metaproject\/) /);
     assert.match(all,/import '\.\/index\.js'/);
+    await assert.rejects(fs.access(path.join(folder,'runtime.js')));
     assert.equal(manifest.version,1);
     assert.equal(manifest.generatedBy,'metaproject');
     assert.equal(manifest.generatedByVersion,packageVersion);
@@ -161,7 +162,7 @@ test('actual generated host runtime accepts a separately built component scope',
 });
 
 
-test('standalone component accepts an existing v1 runtime without version metadata',async()=>{
+test('standalone component accepts the current ABI v1 runtime identified by its symbol',async()=>{
   const root=await fixture('users','user-list');
   const key=Symbol.for('metaproject.runtime.v1');
   const previous={runtime:globalThis[key],elements:globalThis.customElements};
@@ -176,7 +177,7 @@ test('standalone component accepts an existing v1 runtime without version metada
       registerMetaprojectTag:()=>{}
     };
     globalThis.customElements={get:tag=>registered.get(tag),define:(tag,klass)=>registered.set(tag,klass)};
-    await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(component)+'#legacy-v1');
+    await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(component)+'#abi-v1');
     assert.ok(registered.has('user-list'));
   }finally{
     if(previous.runtime===undefined)delete globalThis[key];else globalThis[key]=previous.runtime;

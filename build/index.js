@@ -45,7 +45,6 @@ export async function buildProjectComponents({root=process.cwd(),context,minify=
     const runtimeEntry=path.join(temp,'runtime-entry.js');
     fs.writeFileSync(runtimeEntry,runtimeEntrySource({scope,apiRoot:project.apiRoot,operations}));
     await esbuild.build({...buildOptions,entryPoints:[runtimeEntry],outfile:path.join(outputAbsolute,'index.js'),plugins:[runtimeResolver()]});
-    fs.writeFileSync(path.join(outputAbsolute,'runtime.js'),"export * from './index.js';\n");
     fs.writeFileSync(path.join(outputAbsolute,'api.js'),generateApiModule({openapi:project.resolvedOpenApi,apiRoot:project.apiRoot}));
 
     // Compile every component before bundling so dependencies can be included

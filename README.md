@@ -291,7 +291,6 @@ The build emits a shared host runtime and independently loadable browser-native 
 
 ```text
 index.js          # host runtime: load once, registers base elements
-runtime.js        # compatibility re-export of index.js
 api.js            # operation metadata
 <component>.js    # independently loadable component, without Core/Lit runtime
 all.js            # convenience entry: host runtime + all local components

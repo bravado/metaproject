@@ -147,7 +147,6 @@ The default output is:
 ```text
 public/components/
   index.js       # shared host runtime
-  runtime.js     # compatibility alias
   all.js         # shared runtime + all local components
   api.js
   user-list.js

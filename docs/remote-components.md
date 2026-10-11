@@ -58,11 +58,11 @@ Run `npx metaproject build` on the remote project and serve `public/components/i
 
 The generated component exposes its scope to nested `<data-source>` elements automatically. For manually authored `<data-source>` instances, set the `scope` attribute explicitly when required.
 
-Scope names must be lowercase identifiers containing letters, numbers, dots, underscores, or hyphens. The default is `default` for backwards compatibility with a single project. For separate projects, explicitly choose unique scope names and distinct custom-element tags; loading the same scope with different operation definitions, the same component tag from different scopes, or a tag already defined outside Metaproject is an error.
+Scope names must be lowercase identifiers containing letters, numbers, dots, underscores, or hyphens. The default scope is `default`. For separate projects, explicitly choose unique scope names and distinct custom-element tags; loading the same scope with different operation definitions, the same component tag from different scopes, or a tag already defined outside Metaproject is an error.
 
 ## Distribution files
 
-Each `<tag>.js` is a standalone JavaScript module and does not require sibling `runtime.js`, `api.js`, or chunk files. Component dependencies from the same project are included in the bundle. The generated `manifest.json` identifies its scope, component entry points, runtime ABI, and producer version.
+Each `<tag>.js` is a standalone JavaScript module and does not require sibling `api.js` or chunk files. Component dependencies from the same project are included in the bundle. The generated `manifest.json` identifies its scope, component entry points, runtime ABI, and producer version.
 
 ### Manifest compatibility
 
@@ -78,7 +78,7 @@ Consumers may treat additional descriptive component fields such as titles, prop
 
 The `index.js` runtime is larger because it includes Lit and the Metaproject data primitives. It is intended to be loaded once by the host, not separately for each library.
 
-The `all.js` convenience module and `runtime.js` compatibility re-export use relative imports and must be deployed alongside the host's generated build output.
+The `all.js` convenience module uses relative imports and must be deployed alongside the host's generated build output.
 
 ## HTTP, security, and trust
 
