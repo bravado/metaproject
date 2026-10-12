@@ -55,7 +55,7 @@ try {
     assertExists(path.join('node_modules','metaproject',file));
     assert.match(fs.readFileSync(path.join(installedRoot,file),'utf8'),/Metaproject|MIT License/);
   }
-  assert.match(fs.readFileSync(path.join(installedRoot,'CHANGELOG.md'),'utf8'),/0\\.11\\.0/);
+  assert.ok(fs.readFileSync(path.join(installedRoot,'CHANGELOG.md'),'utf8').includes('0.11.0'));
   assert.ok(fs.readFileSync(path.join(installedRoot,'SECURITY.md'),'utf8').includes('security/advisories/new'));
 
   const installedReadme=fs.readFileSync(path.join(installedRoot,'README.md'),'utf8');
