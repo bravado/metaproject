@@ -136,7 +136,7 @@ API mutations are distinct from application intent. `data-operation` invokes Ope
 
 ## Build boundary
 
-`metaproject build` produces a shared host runtime and independently loadable browser-native component modules in the configured component output directory. The output includes:
+`npx metaproject build` produces a shared host runtime and independently loadable browser-native component modules in the configured component output directory. The output includes:
 
 - operation metadata (`api.js`);
 - the shared host runtime (`index.js`) with the base data components and scoped operation registry;
@@ -158,7 +158,7 @@ Core also owns the project-development model so every tool works against the sam
 - OpenAPI example validation;
 - OpenAPI server and security interpretation;
 - API/component project indexing and diagnostics;
-- project contract validation with `metaproject check`;
+- project contract validation with `npx metaproject check`;
 - static component build;
 - agent skills for new projects, existing-code analysis, OpenAPI adoption, and component generation.
 

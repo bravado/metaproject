@@ -5,7 +5,7 @@ Metaproject build output is browser-native ESM. Components run directly in host 
 After:
 
 ```bash
-metaproject build
+npx metaproject build
 ```
 
 the configured output directory (default `public/components/`) contains a shared host runtime (`index.js`), standalone generated component bundles, and an `all.js` convenience entry.
@@ -212,8 +212,8 @@ Serve the generated output as static browser assets. The host serves `index.js`;
 A typical existing application workflow is:
 
 ```bash
-metaproject check
-metaproject build
+npx metaproject check
+npx metaproject build
 # application deployment publishes public/ as usual
 ```
 

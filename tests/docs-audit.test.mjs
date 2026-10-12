@@ -24,6 +24,7 @@ test('public documentation uses only the current 0.11 contract and CLI name',()=
     assert.doesNotMatch(source,/^\s*metaproject\s+/m,file);
     assert.doesNotMatch(source,/\|\s*metaproject\s+/,file);
     assert.doesNotMatch(source,/`metaproject\s+(?:init|check|build|import-openapi|api|openapi|help|--version)\b/,file);
+    assert.doesNotMatch(source,/(?:^|\n)\s*\$\s+metaproject\s+(?:init|check|build|import-openapi|api|openapi|help|--version)\b/,file);
     assert.doesNotMatch(source,/_chunks\b/,file);
     assert.doesNotMatch(source,/\bCanvas\b/,file);
     assert.doesNotMatch(source,/\bapi_root\b/,file);

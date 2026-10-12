@@ -20,7 +20,7 @@ npx metaproject openapi upsert-schema --input FILE [project-root]
 npx metaproject --version
 ```
 
-Run `metaproject help` for the same surface from the installed package.
+Run `npx metaproject help` for the same surface from the installed package.
 
 ## Typical project flow
 

@@ -114,7 +114,7 @@ The repository's [vanilla example](examples/vanilla/) is this flow as a runnable
 | Node.js | Node **22.12.0+** on maintained Node release lines; CI covers 22.12.0, 24, and 26. |
 | OpenAPI | OpenAPI 3.0/3.1 within Core's documented [supported subset](docs/openapi-support.md). |
 | Browser output | Native ES modules targeting **ES2022**; requires modern Custom Elements, Shadow DOM, modules, and `fetch` support. |
-| Vite | `metaproject/vite` is an optional experimental integration with Vite **6+**. Prefer static `metaproject build` output for framework-independent assets and remote-component distribution. |
+| Vite | `metaproject/vite` is an optional experimental integration with Vite **6+**. Prefer static `npx metaproject build` output for framework-independent assets and remote-component distribution. |
 | Shared runtime | 0.11 uses runtime ABI **v1**, identified by `Symbol.for('metaproject.runtime.v1')`; compatible host/component builds do not require exact npm-version equality. |
 
 See [JavaScript API and compatibility](docs/public-api.md), [OpenAPI support](docs/openapi-support.md), and [shared runtime/remote components](docs/remote-components.md) for the detailed boundaries.
@@ -141,7 +141,7 @@ components:
   output: public/components
 ```
 
-See the [canonical `metaproject.yaml` configuration reference](docs/configuration.md) for every supported field and default. `metaproject check` and `metaproject build` reject unknown top-level and nested configuration fields.
+See the [canonical `metaproject.yaml` configuration reference](docs/configuration.md) for every supported field and default. `npx metaproject check` and `npx metaproject build` reject unknown top-level and nested configuration fields.
 
 API endpoints belong to OpenAPI, not `metaproject.yaml`:
 
@@ -327,7 +327,7 @@ See [Using generated components](docs/using-components.md).
 
 ## OpenAPI tooling
 
-Metaproject implements a documented OpenAPI 3.0/3.1 subset. See the [OpenAPI support matrix](docs/openapi-support.md) before adopting an existing contract; `metaproject check` reports unsupported and partially supported constructs.
+Metaproject implements a documented OpenAPI 3.0/3.1 subset. See the [OpenAPI support matrix](docs/openapi-support.md) before adopting an existing contract; `npx metaproject check` reports unsupported and partially supported constructs.
 
 Metaproject keeps the API contract deterministic and useful for development previews:
 
@@ -420,7 +420,7 @@ Core ships focused skills instead of one monolithic workflow:
 - `skills/component-creator/SKILL.md` — generate the smallest useful reusable Web Components from modeled operations;
 - `skills/component-authoring/SKILL.md` — edit HTML-first components and Core primitives directly.
 
-`metaproject init` can add a bounded `AGENTS.md` section that routes coding agents to the right workflow.
+`npx metaproject init` can add a bounded `AGENTS.md` section that routes coding agents to the right workflow.
 
 ## Documentation
 

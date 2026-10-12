@@ -54,7 +54,7 @@ components:
   output: public/components
 ```
 
-Run `metaproject build` on the remote project and serve `public/components/invoice-list.js` from its own domain. Every component registers its own OpenAPI operations and default API server under its scope; the host's other scopes are unaffected, even if the different API contracts use the same `operationId`.
+Run `npx metaproject build` on the remote project and serve `public/components/invoice-list.js` from its own domain. Every component registers its own OpenAPI operations and default API server under its scope; the host's other scopes are unaffected, even if the different API contracts use the same `operationId`.
 
 The generated component exposes its scope to nested `<data-source>` elements automatically. For manually authored `<data-source>` instances, set the `scope` attribute explicitly when required.
 

@@ -23,7 +23,7 @@ Components must remain independent of any particular host application.
 
 ## Process
 
-1. Run `metaproject init` if the project is not initialized.
+1. Run `npx metaproject init` if the project is not initialized.
 2. Define the smallest browser-facing API needed for the first useful workflow.
 3. Put API endpoints in the top-level OpenAPI `servers` list. The first server is the generated runtime default; additional servers are alternate deployments/tools targets.
 4. Describe authentication with standard OpenAPI `components.securitySchemes` and root/operation `security`. Never write credentials, tokens, passwords, certificates, or private keys into the spec.
@@ -36,7 +36,7 @@ npx metaproject openapi upsert-schema --input /tmp/schema.json
 npx metaproject openapi upsert-operation --input /tmp/operation.json
 ```
 
-8. Run `metaproject openapi check-examples`.
+8. Run `npx metaproject openapi check-examples`.
 9. Follow `node_modules/metaproject/skills/component-creator/SKILL.md`.
 10. Run:
 

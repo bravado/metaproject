@@ -136,7 +136,7 @@ npx metaproject openapi check-examples
 npx metaproject check
 ```
 
-`metaproject check` validates the OpenAPI/component relationship model and reports missing operations, invalid component source, duplicate IDs, example problems, and related project diagnostics without producing build output.
+`npx metaproject check` validates the OpenAPI/component relationship model and reports missing operations, invalid component source, duplicate IDs, example problems, and related project diagnostics without producing build output.
 
 ## 6. Build
 
