@@ -48,6 +48,34 @@ try {
   if(process.platform!=='win32') fs.accessSync(cli,fs.constants.X_OK);
 
   const packageJson=JSON.parse(fs.readFileSync(path.join(installedRoot,'package.json'),'utf8'));
+  const installedReadme=fs.readFileSync(path.join(installedRoot,'README.md'),'utf8');
+  const installedGettingStarted=fs.readFileSync(path.join(installedRoot,'docs','getting-started.md'),'utf8');
+  const installedCliReference=fs.readFileSync(path.join(installedRoot,'docs','cli-reference.md'),'utf8');
+
+  for(const source of [installedReadme,installedGettingStarted]){
+    assert.match(source,/\bnpx\s+metaproject\b/);
+    assert.match(source,/npm install --save-dev metaproject/);
+    assert.match(source,/npx metaproject init/);
+    assert.match(source,/npx metaproject check/);
+    assert.match(source,/npx metaproject build/);
+    assert.match(source,/components\/all\.js/);
+  }
+  assert.match(installedReadme,/npx metaproject import-openapi/);
+  assert.match(installedCliReference,/npx metaproject api list/);
+  assert.match(installedCliReference,/npx metaproject api show OPERATION/);
+  assert.match(installedCliReference,/npx metaproject api call OPERATION/);
+
+  const help=run(cli,['help']).stdout;
+  for(const command of[
+    'metaproject init [project-root] [--name NAME] [--no-agents]',
+    'metaproject check [project-root]',
+    'metaproject build [project-root] [--minify] [--sourcemap]',
+    'metaproject import-openapi SOURCE [project-root] [--force]',
+    'metaproject api list [project-root]',
+    'metaproject api show OPERATION [project-root]',
+    'metaproject api call OPERATION [project-root] [parameters/options]'
+  ]) assert.ok(help.includes(command),command);
+
   const version=run(cli,['--version']).stdout.trim();
   assert.equal(version,packageJson.version);
 
@@ -117,6 +145,15 @@ components:
 
   const imported=run(cli,['import-openapi',sourceSpec]);
   assert.match(imported.stdout,/Imported OpenAPI/);
+
+  const examplesCheck=run(cli,['openapi','check-examples']);
+  assert.match(examplesCheck.stdout,/example/i);
+
+  const list=run(cli,['api','list']);
+  assert.match(list.stdout,/listUsers/);
+  const show=run(cli,['api','show','listUsers']);
+  assert.match(show.stdout,/listUsers/);
+  assert.match(show.stdout,/GET/i);
 
   const componentDir=path.join(consumer,'components','user-list');
   fs.mkdirSync(componentDir,{recursive:true});

@@ -122,8 +122,8 @@ See `docs/openapi-component-workflow.md` for a small OpenAPI → component examp
 Finish with:
 
 ```bash
-metaproject check
-metaproject build
+npx metaproject check
+npx metaproject build
 ```
 
 ## Standalone component distribution

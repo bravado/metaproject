@@ -58,27 +58,7 @@ Use the CLI for initialization, validation, builds, OpenAPI mutation/import, and
 
 ## CLI surface
 
-The public 0.11 CLI is:
-
-```text
-metaproject init [project-root] [--name NAME] [--no-agents]
-metaproject check [project-root]
-metaproject build [project-root] [--minify] [--sourcemap]
-metaproject import-openapi SOURCE [project-root] [--force]
-
-metaproject api list [project-root]
-metaproject api show OPERATION [project-root]
-metaproject api call OPERATION [project-root] [parameters/options]
-
-metaproject openapi check-examples [project-root]
-metaproject openapi upsert-operation --input FILE [project-root]
-metaproject openapi upsert-schema --input FILE [project-root]
-
-metaproject --version
-metaproject help
-```
-
-These commands are the supported CLI contract for the 0.11.x line. `build` always emits API metadata together with the component/runtime output; there is no separate public partial-build command.
+The supported 0.11 command surface is maintained in the [CLI reference](cli-reference.md) and is regression-checked against `npx metaproject help`. Use the CLI for initialization, validation, builds, OpenAPI import/mutation, and direct operation calls.
 
 ## Root import policy
 
@@ -89,4 +69,4 @@ import * as metaproject from 'metaproject'; // not supported
 ```
 
 Choose the subpath matching the environment and responsibility instead. This keeps browser code from accidentally depending on filesystem/build tooling and prevents unrelated APIs from becoming coupled through one compatibility surface.
-The [Vite example](../examples/vite/) demonstrates the public `metaproject/vite` integration and explains when to prefer it over static `metaproject build` output.
+The [Vite example](../examples/vite/) demonstrates the public `metaproject/vite` integration and explains when to prefer it over static `npx metaproject build` output.

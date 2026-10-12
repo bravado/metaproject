@@ -1,8 +1,8 @@
 # `metaproject.yaml` configuration
 
-`metaproject.yaml` is the canonical configuration file for a Metaproject project. The machine-readable contract is shipped as `project/metaproject.schema.json`.
+`metaproject.yaml` is the canonical configuration file for a Metaproject project. The machine-readable contract is shipped as [`project/metaproject.schema.json`](../project/metaproject.schema.json).
 
-Both `metaproject check` and `metaproject build` validate this file before reading the OpenAPI contract or generating output. Unknown top-level fields and unknown fields inside `components` or `build` are rejected so misspellings cannot silently change build behavior.
+Both `npx metaproject check` and `npx metaproject build` validate this file before reading the OpenAPI contract or generating output. Unknown top-level fields and unknown fields inside `components` or `build` are rejected so misspellings cannot silently change build behavior.
 
 ## Canonical configuration
 

@@ -64,8 +64,8 @@ Ignore dependencies, caches, generated component output, uploads, and unrelated 
 6. Use deterministic mutation commands rather than fragile YAML surgery when practical:
 
 ```bash
-metaproject openapi upsert-schema --input /tmp/schema.json
-metaproject openapi upsert-operation --input /tmp/operation.json
+npx metaproject openapi upsert-schema --input /tmp/schema.json
+npx metaproject openapi upsert-operation --input /tmp/operation.json
 ```
 
 7. Every new or updated operation must have:
@@ -79,8 +79,8 @@ metaproject openapi upsert-operation --input /tmp/operation.json
 9. Validate:
 
 ```bash
-metaproject openapi check-examples
-metaproject check
+npx metaproject openapi check-examples
+npx metaproject check
 ```
 
 10. Then follow `node_modules/metaproject/skills/component-creator/SKILL.md`.

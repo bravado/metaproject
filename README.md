@@ -20,9 +20,104 @@ Web Components usable by any application
 
 The generated components are ordinary browser custom elements. Use them in plain HTML/JavaScript, Lit, framework wrappers, or server-rendered applications.
 
-## Node.js support
+## 5-minute first success
 
-Metaproject 0.11.x supports Node.js **22.12.0 and newer maintained releases**. CI exercises the exact minimum (22.12.0), Node 24 LTS, and the current Node 26 line. Node 20 is not supported by the 0.11.x release line.
+Install Metaproject as a development dependency, then initialize a project:
+
+```bash
+npm install --save-dev metaproject
+npx metaproject init
+```
+
+Documentation examples use `npx metaproject ...` so the project-local executable is resolved without a global installation.
+
+Model one browser-facing operation in `openapi.yaml`:
+
+```yaml
+openapi: 3.1.0
+info:
+  title: Example API
+  version: 1.0.0
+servers:
+  - url: /api
+paths:
+  /users:
+    get:
+      operationId: listUsers
+      x-project-id: op-list-users
+      responses:
+        '200':
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+              example:
+                - { id: 1, name: Ada }
+components:
+  schemas:
+    User:
+      x-project-id: schema-user
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+      required: [id, name]
+```
+
+Or, if the application already has a bundled OpenAPI document, import it instead:
+
+```bash
+npx metaproject import-openapi ./docs/openapi.yaml
+```
+
+Create `components/user-list/component.html`:
+
+```html
+<title>Users</title>
+
+<data-source request="listUsers">
+  <data-table>
+    <button data-action="open-user">Open</button>
+  </data-table>
+</data-source>
+```
+
+Validate and build:
+
+```bash
+npx metaproject check
+npx metaproject build
+```
+
+Embed the generated component in any HTML host:
+
+```html
+<script type="module" src="/components/all.js"></script>
+<user-list id="users"></user-list>
+
+<script type="module">
+  document.querySelector('#users').addEventListener('open-user', event => {
+    console.log(event.detail.resource);
+  });
+</script>
+```
+
+The repository's [vanilla example](examples/vanilla/) is this flow as a runnable local application with a deterministic API.
+
+## Compatibility
+
+| Boundary | 0.11.x policy |
+| --- | --- |
+| Node.js | Node **22.12.0+** on maintained Node release lines; CI covers 22.12.0, 24, and 26. |
+| OpenAPI | OpenAPI 3.0/3.1 within Core's documented [supported subset](docs/openapi-support.md). |
+| Browser output | Native ES modules targeting **ES2022**; requires modern Custom Elements, Shadow DOM, modules, and `fetch` support. |
+| Vite | `metaproject/vite` is an optional experimental integration with Vite **6+**. Prefer static `npx metaproject build` output for framework-independent assets and remote-component distribution. |
+| Shared runtime | 0.11 uses runtime ABI **v1**, identified by `Symbol.for('metaproject.runtime.v1')`; compatible host/component builds do not require exact npm-version equality. |
+
+See [JavaScript API and compatibility](docs/public-api.md), [OpenAPI support](docs/openapi-support.md), and [shared runtime/remote components](docs/remote-components.md) for the detailed boundaries.
 
 ## Project shape
 
@@ -46,7 +141,7 @@ components:
   output: public/components
 ```
 
-See the [canonical `metaproject.yaml` configuration reference](docs/configuration.md) for every supported field and default. `metaproject check` and `metaproject build` reject unknown top-level and nested configuration fields.
+See the [canonical `metaproject.yaml` configuration reference](docs/configuration.md) for every supported field and default. `npx metaproject check` and `npx metaproject build` reject unknown top-level and nested configuration fields.
 
 API endpoints belong to OpenAPI, not `metaproject.yaml`:
 
@@ -232,7 +327,7 @@ See [Using generated components](docs/using-components.md).
 
 ## OpenAPI tooling
 
-Metaproject implements a documented OpenAPI 3.0/3.1 subset. See the [OpenAPI support matrix](docs/openapi-support.md) before adopting an existing contract; `metaproject check` reports unsupported and partially supported constructs.
+Metaproject implements a documented OpenAPI 3.0/3.1 subset. See the [OpenAPI support matrix](docs/openapi-support.md) before adopting an existing contract; `npx metaproject check` reports unsupported and partially supported constructs.
 
 Metaproject keeps the API contract deterministic and useful for development previews:
 
@@ -291,7 +386,6 @@ The build emits a shared host runtime and independently loadable browser-native 
 
 ```text
 index.js          # host runtime: load once, registers base elements
-runtime.js        # compatibility re-export of index.js
 api.js            # operation metadata
 <component>.js    # independently loadable component, without Core/Lit runtime
 all.js            # convenience entry: host runtime + all local components
@@ -338,6 +432,7 @@ Core ships focused skills instead of one monolithic workflow:
 - [Adopting an existing application](docs/adopting-existing-application.md)
 - [Core data-source](docs/data-source.md)
 - [Calling OpenAPI operations from the CLI](docs/api-cli.md)
+- [CLI reference](docs/cli-reference.md)
 - [Using generated components](docs/using-components.md)
 - [Shared runtime and remote components](docs/remote-components.md)
 - [OpenAPI → component workflow](docs/openapi-component-workflow.md)

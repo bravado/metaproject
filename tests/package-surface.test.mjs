@@ -32,8 +32,8 @@ const internal=[
 
 test('package engines and documentation agree on the Node 0.11.x baseline',()=>{
   assert.equal(pkg.engines.node,'>=22.12.0');
-  assert.match(readme,/Node\.js \*\*22\.12\.0 and newer maintained releases\*\*/);
-  assert.match(readme,/exact minimum \(22\.12\.0\), Node 24 LTS, and the current Node 26 line/);
+  assert.match(readme,/Node \*\*22\.12\.0\+\*\*/);
+  assert.match(readme,/CI covers 22\.12\.0, 24, and 26/);
 });
 
 test('package exports remain limited to the documented public surface',()=>{

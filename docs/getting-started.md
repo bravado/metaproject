@@ -9,6 +9,8 @@ npm install --save-dev metaproject
 npx metaproject init
 ```
 
+These docs use `npx metaproject ...` so the project-local executable is resolved without a global installation.
+
 This creates the Core-owned project foundation without imposing a frontend application framework:
 
 ```text
@@ -134,7 +136,7 @@ npx metaproject openapi check-examples
 npx metaproject check
 ```
 
-`metaproject check` validates the OpenAPI/component relationship model and reports missing operations, invalid component source, duplicate IDs, example problems, and related project diagnostics without producing build output.
+`npx metaproject check` validates the OpenAPI/component relationship model and reports missing operations, invalid component source, duplicate IDs, example problems, and related project diagnostics without producing build output.
 
 ## 6. Build
 
@@ -147,12 +149,10 @@ The default output is:
 ```text
 public/components/
   index.js       # shared host runtime
-  runtime.js     # compatibility alias
   all.js         # shared runtime + all local components
   api.js
   user-list.js
   manifest.json
-  ...generated chunks
 ```
 
 ## 7. Use the Web Component

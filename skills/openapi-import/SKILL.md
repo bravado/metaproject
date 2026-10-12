@@ -20,17 +20,17 @@ If the application's authoritative contract is intentionally multi-file, prefer 
 Initialize Metaproject first if needed:
 
 ```bash
-metaproject init
+npx metaproject init
 ```
 
 Import a bundled OpenAPI 3.0/3.1 YAML/JSON file or URL:
 
 ```bash
-metaproject import-openapi ./docs/openapi.yaml
-metaproject import-openapi https://example.test/openapi.json
+npx metaproject import-openapi ./docs/openapi.yaml
+npx metaproject import-openapi https://example.test/openapi.json
 ```
 
-Import copies the contract into the Metaproject-owned `openapi.yaml`, preserves source `operationId` values, generates only missing operation IDs, and adds missing stable `x-project-id` values required by Metaproject tooling. Run `metaproject check` after import and use `docs/openapi-support.md` as the compatibility boundary.
+Import copies the contract into the Metaproject-owned `openapi.yaml`, preserves source `operationId` values, generates only missing operation IDs, and adds missing stable `x-project-id` values required by Metaproject tooling. Run `npx metaproject check` after import and use `docs/openapi-support.md` as the compatibility boundary.
 
 If `openapi.yaml` already contains modeled resources, do not force-replace it as a routine rerun. Compare the existing contract with the source first. Use `--force` only when replacement is explicitly intended and preservation of Metaproject-owned IDs/customizations is not required.
 
@@ -54,8 +54,8 @@ Core build/ref resolution supports local external references. Keep the repositor
 6. Run:
 
 ```bash
-metaproject openapi check-examples
-metaproject check
+npx metaproject openapi check-examples
+npx metaproject check
 ```
 
 7. Follow `node_modules/metaproject/skills/component-creator/SKILL.md`.
