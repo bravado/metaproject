@@ -51,9 +51,32 @@
     "project/",
     "skills/",
     "vite/",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md"
   ],
   "devDependencies": {
     "playwright": "1.63.0"
-  }
+  },
+  "description": "OpenAPI-driven development and build tools for reusable Web Components.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/metaproject/core.git"
+  },
+  "homepage": "https://github.com/metaproject/core#readme",
+  "bugs": {
+    "url": "https://github.com/metaproject/core/issues"
+  },
+  "keywords": [
+    "openapi",
+    "web-components",
+    "custom-elements",
+    "api",
+    "compiler",
+    "static-build",
+    "lit"
+  ]
 }

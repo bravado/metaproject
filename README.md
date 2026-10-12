@@ -437,3 +437,10 @@ Core ships focused skills instead of one monolithic workflow:
 - [Shared runtime and remote components](docs/remote-components.md)
 - [OpenAPI → component workflow](docs/openapi-component-workflow.md)
 - [Runnable product examples](examples/)
+
+## License, contributing, and security
+
+Metaproject Core is distributed under the [MIT License](LICENSE). Review the
+[0.11 release notes](CHANGELOG.md), read the
+[contributing guide](CONTRIBUTING.md) before proposing changes, and follow the
+[security policy](SECURITY.md) to report vulnerabilities privately.

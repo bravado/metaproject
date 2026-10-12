@@ -48,6 +48,16 @@ try {
   if(process.platform!=='win32') fs.accessSync(cli,fs.constants.X_OK);
 
   const packageJson=JSON.parse(fs.readFileSync(path.join(installedRoot,'package.json'),'utf8'));
+  assert.equal(packageJson.license,'MIT');
+  assert.equal(packageJson.repository.url,'git+https://github.com/metaproject/core.git');
+  assert.equal(packageJson.bugs.url,'https://github.com/metaproject/core/issues');
+  for(const file of ['LICENSE','CHANGELOG.md','CONTRIBUTING.md','SECURITY.md']){
+    assertExists(path.join('node_modules','metaproject',file));
+    assert.match(fs.readFileSync(path.join(installedRoot,file),'utf8'),/Metaproject|MIT License/);
+  }
+  assert.match(fs.readFileSync(path.join(installedRoot,'CHANGELOG.md'),'utf8'),/0\\.11\\.0/);
+  assert.match(fs.readFileSync(path.join(installedRoot,'SECURITY.md'),'utf8'),/security\\/advisories\\/new/);
+
   const installedReadme=fs.readFileSync(path.join(installedRoot,'README.md'),'utf8');
   const installedGettingStarted=fs.readFileSync(path.join(installedRoot,'docs','getting-started.md'),'utf8');
   const installedCliReference=fs.readFileSync(path.join(installedRoot,'docs','cli-reference.md'),'utf8');
