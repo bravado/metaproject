@@ -140,7 +140,6 @@ API mutations are distinct from application intent. `data-operation` invokes Ope
 
 - operation metadata (`api.js`);
 - the shared host runtime (`index.js`) with the base data components and scoped operation registry;
-- a compatibility `runtime.js` re-export;
 - one self-contained generated module per component (without bundled Core or Lit runtime);
 - an `all.js` convenience entry to install the runtime and load all local components;
 - `manifest.json` with component metadata.
