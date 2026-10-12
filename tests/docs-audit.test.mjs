@@ -18,22 +18,18 @@ const markdownFiles=[
   ...walk('skills').filter(file=>file.endsWith('.md'))
 ].sort();
 
-test('public documentation uses current 0.11 terminology and CLI name',()=>{
-  const migration='docs/migrating-to-0.11.md';
+test('public documentation uses only the current 0.11 contract and CLI name',()=>{
   for(const file of markdownFiles){
     const source=read(file);
     assert.doesNotMatch(source,/\bnpx\s+metaproject\b/,file);
     assert.doesNotMatch(source,/_chunks\b/,file);
     assert.doesNotMatch(source,/\bCanvas\b/,file);
-    if(file!==migration){
-      assert.doesNotMatch(source,/\bapi_root\b/,file);
-      assert.doesNotMatch(source,/\bEntity\b/,file);
-    }
+    assert.doesNotMatch(source,/\bapi_root\b/,file);
+    assert.doesNotMatch(source,/\bEntity\b/,file);
+    assert.doesNotMatch(source,/\b(?:migration|legacy|deprecated)\b/i,file);
+    assert.doesNotMatch(source,/\bruntime\.js\b/,file);
+    assert.doesNotMatch(source,/\bupsert-entity\b/,file);
   }
-
-  assert.match(migrationSource(),/\bapi_root\b/);
-  assert.match(migrationSource(),/Entity terminology/);
-  assert.match(migrationSource(),/Schema/);
 });
 
 test('documented generated output matches the standalone 0.11 build',()=>{
@@ -107,10 +103,6 @@ test('README and getting-started describe a complete first-success path',()=>{
   assert.match(readme,/metaproject import-openapi/);
   assert.match(readme,/components\/user-list\/component\.html/);
 });
-
-function migrationSource(){
-  return read('docs/migrating-to-0.11.md');
-}
 
 function read(relative){
   return fs.readFileSync(path.join(root,relative),'utf8');
