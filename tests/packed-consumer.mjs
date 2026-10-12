@@ -56,7 +56,7 @@ try {
     assert.match(fs.readFileSync(path.join(installedRoot,file),'utf8'),/Metaproject|MIT License/);
   }
   assert.match(fs.readFileSync(path.join(installedRoot,'CHANGELOG.md'),'utf8'),/0\\.11\\.0/);
-  assert.match(fs.readFileSync(path.join(installedRoot,'SECURITY.md'),'utf8'),/security\\/advisories\\/new/);
+  assert.ok(fs.readFileSync(path.join(installedRoot,'SECURITY.md'),'utf8').includes('security/advisories/new'));
 
   const installedReadme=fs.readFileSync(path.join(installedRoot,'README.md'),'utf8');
   const installedGettingStarted=fs.readFileSync(path.join(installedRoot,'docs','getting-started.md'),'utf8');
