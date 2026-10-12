@@ -21,10 +21,10 @@ export function parseComponentSource(source,{tag,path=''}={}){
     removals.push([match.index,match.index+match[0].length]);
   }
   const body=removeRanges(source,removals).trim();
-  if(/<data-resource\b/i.test(body))throw new Error(`${path||tag}: <data-resource> was removed. Use <data-source request="operationId"> to fetch/provide data.`);
-  if(/\bapi\.[A-Za-z_$][\w$]*\s*\(/.test(body))throw new Error(`${path||tag}: direct api.operationId() calls were removed. Use <data-source request="operationId">.`);
-  if(/<data-source\b[^>]*\bsave\s*=/i.test(body))throw new Error(`${path||tag}: data-source save= was removed. Put data-operation="operationId" on the action element instead.`);
-  if(/<data-table\b[^>]*\.actions\s*=/i.test(body))throw new Error(`${path||tag}: data-table .actions was removed. Put data-action/data-operation elements inside <data-table> instead.`);
+  if(/<data-resource\b/i.test(body))throw new Error(`${path||tag}: <data-resource> is not supported. Use <data-source request="operationId"> to fetch/provide data.`);
+  if(/\bapi\.[A-Za-z_$][\w$]*\s*\(/.test(body))throw new Error(`${path||tag}: direct api.operationId() calls are not supported. Use <data-source request="operationId">.`);
+  if(/<data-source\b[^>]*\bsave\s*=/i.test(body))throw new Error(`${path||tag}: data-source save= is not supported. Put data-operation="operationId" on the action element.`);
+  if(/<data-table\b[^>]*\.actions\s*=/i.test(body))throw new Error(`${path||tag}: data-table .actions is not supported. Put data-action/data-operation elements inside <data-table>.`);
   assertStaticNativeTemplates(body,path||tag);
   const actions=unique([...body.matchAll(/\bdata-action\s*=\s*(['"])([^'"]+)\1/gi)].map(x=>x[2].trim()).filter(Boolean));
   const dependencies=unique([...body.matchAll(/<([a-z][\w.-]*-[\w.-]+)(?:\s|>|\/)/gi)].map(x=>x[1].toLowerCase()).filter(x=>x!==tag&&!BUILTIN_TAGS.has(x)));
