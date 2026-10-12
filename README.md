@@ -386,7 +386,6 @@ The build emits a shared host runtime and independently loadable browser-native 
 
 ```text
 index.js          # host runtime: load once, registers base elements
-runtime.js        # compatibility re-export of index.js
 api.js            # operation metadata
 <component>.js    # independently loadable component, without Core/Lit runtime
 all.js            # convenience entry: host runtime + all local components
@@ -438,4 +437,3 @@ Core ships focused skills instead of one monolithic workflow:
 - [Shared runtime and remote components](docs/remote-components.md)
 - [OpenAPI → component workflow](docs/openapi-component-workflow.md)
 - [Runnable product examples](examples/)
-- [Migrating to 0.11](docs/migrating-to-0.11.md)
