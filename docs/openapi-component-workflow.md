@@ -104,6 +104,6 @@ If a new `archiveUser` operation is later added to OpenAPI and belongs in the li
 Finish by validating the focused update:
 
 ```bash
-metaproject check
-metaproject build
+npx metaproject check
+npx metaproject build
 ```
