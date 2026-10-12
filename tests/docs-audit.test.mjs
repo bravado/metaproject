@@ -21,7 +21,8 @@ const markdownFiles=[
 test('public documentation uses only the current 0.11 contract and CLI name',()=>{
   for(const file of markdownFiles){
     const source=read(file);
-    assert.doesNotMatch(source,/\bnpx\s+metaproject\b/,file);
+    assert.doesNotMatch(source,/^\s*metaproject\s+/m,file);
+    assert.doesNotMatch(source,/\|\s*metaproject\s+/,file);
     assert.doesNotMatch(source,/_chunks\b/,file);
     assert.doesNotMatch(source,/\bCanvas\b/,file);
     assert.doesNotMatch(source,/\bapi_root\b/,file);
@@ -61,7 +62,7 @@ test('CLI reference is synchronized with metaproject help',()=>{
 
   const helpMatch=result.stdout.match(/Usage:\n([\s\S]*?)\n\nSOURCE/);
   assert.ok(helpMatch,'CLI help Usage block not found');
-  const helpCommands=helpMatch[1].split('\n').map(line=>line.trim()).filter(Boolean);
+  const helpCommands=helpMatch[1].split('\n').map(line=>line.trim()).filter(Boolean).map(line=>`npx ${line}`);
 
   const referenceMatch=cliReference.match(/## Complete command surface\n\n```text\n([\s\S]*?)\n```/);
   assert.ok(referenceMatch,'CLI reference command block not found');
@@ -69,9 +70,9 @@ test('CLI reference is synchronized with metaproject help',()=>{
 
   assert.deepEqual(referenceCommands,helpCommands);
   for(const command of[
-    'metaproject api list [project-root]',
-    'metaproject api show OPERATION [project-root]',
-    'metaproject api call OPERATION [project-root] [parameters/options]'
+    'npx metaproject api list [project-root]',
+    'npx metaproject api show OPERATION [project-root]',
+    'npx metaproject api call OPERATION [project-root] [parameters/options]'
   ]) assert.ok(referenceCommands.includes(command),command);
 });
 
@@ -95,12 +96,12 @@ test('all local Markdown links resolve',()=>{
 test('README and getting-started describe a complete first-success path',()=>{
   for(const source of [readme,gettingStarted]){
     assert.match(source,/npm install --save-dev metaproject/);
-    assert.match(source,/metaproject init/);
-    assert.match(source,/metaproject check/);
-    assert.match(source,/metaproject build/);
+    assert.match(source,/npx metaproject init/);
+    assert.match(source,/npx metaproject check/);
+    assert.match(source,/npx metaproject build/);
     assert.match(source,/components\/all\.js/);
   }
-  assert.match(readme,/metaproject import-openapi/);
+  assert.match(readme,/npx metaproject import-openapi/);
   assert.match(readme,/components\/user-list\/component\.html/);
 });
 

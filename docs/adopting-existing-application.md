@@ -6,7 +6,7 @@ Metaproject does not require rewriting the host application. Add it as a develop
 
 ```bash
 npm install --save-dev metaproject
-metaproject init
+npx metaproject init
 ```
 
 `init` is conservative and idempotent: it creates missing Metaproject files/directories but never overwrites existing `metaproject.yaml` or OpenAPI source. Rerunning it is safe. By default it also maintains only the bounded section between `<!-- metaproject:start -->` and `<!-- metaproject:end -->` in `AGENTS.md`; content outside that block remains owned by the application and is left untouched. Use `--no-agents` when Metaproject should not create or update that managed block.
@@ -29,13 +29,13 @@ public/components/         # generated browser assets
 If the application already has a useful bundled OpenAPI 3.0/3.1 document within Core's [supported subset](openapi-support.md), import it:
 
 ```bash
-metaproject import-openapi ./docs/openapi.yaml
+npx metaproject import-openapi ./docs/openapi.yaml
 ```
 
 or:
 
 ```bash
-metaproject import-openapi https://example.test/openapi.json
+npx metaproject import-openapi https://example.test/openapi.json
 ```
 
 This copies and normalizes it into Metaproject's `openapi.yaml`.
@@ -103,8 +103,8 @@ Core's compiler/project index uses the configured source directory; component ta
 ## Build into the existing application
 
 ```bash
-metaproject check
-metaproject build
+npx metaproject check
+npx metaproject build
 ```
 
 Then include the generated browser entry point in the application layout:
@@ -141,8 +141,8 @@ A useful existing-project CI sequence is:
 
 ```bash
 npm ci
-metaproject check
-metaproject build
+npx metaproject check
+npx metaproject build
 ```
 
 You may also make the build part of the application's normal asset build/deployment. Generated files should generally be treated as build output rather than hand-maintained source.

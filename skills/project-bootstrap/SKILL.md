@@ -32,8 +32,8 @@ Components must remain independent of any particular host application.
 7. Use the deterministic mutation tools when adding/updating modeled resources:
 
 ```bash
-metaproject openapi upsert-schema --input /tmp/schema.json
-metaproject openapi upsert-operation --input /tmp/operation.json
+npx metaproject openapi upsert-schema --input /tmp/schema.json
+npx metaproject openapi upsert-operation --input /tmp/operation.json
 ```
 
 8. Run `metaproject openapi check-examples`.
@@ -41,8 +41,8 @@ metaproject openapi upsert-operation --input /tmp/operation.json
 10. Run:
 
 ```bash
-metaproject check
-metaproject build
+npx metaproject check
+npx metaproject build
 ```
 
 ## Rules

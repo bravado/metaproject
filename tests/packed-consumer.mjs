@@ -53,17 +53,17 @@ try {
   const installedCliReference=fs.readFileSync(path.join(installedRoot,'docs','cli-reference.md'),'utf8');
 
   for(const source of [installedReadme,installedGettingStarted]){
-    assert.doesNotMatch(source,/\bnpx\s+metaproject\b/);
+    assert.match(source,/\bnpx\s+metaproject\b/);
     assert.match(source,/npm install --save-dev metaproject/);
-    assert.match(source,/metaproject init/);
-    assert.match(source,/metaproject check/);
-    assert.match(source,/metaproject build/);
+    assert.match(source,/npx metaproject init/);
+    assert.match(source,/npx metaproject check/);
+    assert.match(source,/npx metaproject build/);
     assert.match(source,/components\/all\.js/);
   }
-  assert.match(installedReadme,/metaproject import-openapi/);
-  assert.match(installedCliReference,/metaproject api list/);
-  assert.match(installedCliReference,/metaproject api show OPERATION/);
-  assert.match(installedCliReference,/metaproject api call OPERATION/);
+  assert.match(installedReadme,/npx metaproject import-openapi/);
+  assert.match(installedCliReference,/npx metaproject api list/);
+  assert.match(installedCliReference,/npx metaproject api show OPERATION/);
+  assert.match(installedCliReference,/npx metaproject api call OPERATION/);
 
   const help=run(cli,['help']).stdout;
   for(const command of[

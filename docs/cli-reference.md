@@ -2,22 +2,22 @@
 
 The public 0.11 command is `metaproject`. Command examples in the documentation use that executable name.
 
-When Metaproject is installed as a local npm development dependency and `node_modules/.bin` is not already on your shell `PATH`, invoke the same executable with `npm exec -- metaproject ...`.
+Use `npx metaproject ...` to run the project-local executable without requiring a global installation.
 
 ## Complete command surface
 
 ```text
-metaproject init [project-root] [--name NAME] [--no-agents]
-metaproject check [project-root]
-metaproject build [project-root] [--minify] [--sourcemap]
-metaproject import-openapi SOURCE [project-root] [--force]
-metaproject api list [project-root]
-metaproject api show OPERATION [project-root]
-metaproject api call OPERATION [project-root] [parameters/options]
-metaproject openapi check-examples [project-root]
-metaproject openapi upsert-operation --input FILE [project-root]
-metaproject openapi upsert-schema --input FILE [project-root]
-metaproject --version
+npx metaproject init [project-root] [--name NAME] [--no-agents]
+npx metaproject check [project-root]
+npx metaproject build [project-root] [--minify] [--sourcemap]
+npx metaproject import-openapi SOURCE [project-root] [--force]
+npx metaproject api list [project-root]
+npx metaproject api show OPERATION [project-root]
+npx metaproject api call OPERATION [project-root] [parameters/options]
+npx metaproject openapi check-examples [project-root]
+npx metaproject openapi upsert-operation --input FILE [project-root]
+npx metaproject openapi upsert-schema --input FILE [project-root]
+npx metaproject --version
 ```
 
 Run `metaproject help` for the same surface from the installed package.
@@ -25,17 +25,17 @@ Run `metaproject help` for the same surface from the installed package.
 ## Typical project flow
 
 ```text
-metaproject init
-metaproject check
-metaproject build
+npx metaproject init
+npx metaproject check
+npx metaproject build
 ```
 
 To adopt an existing bundled OpenAPI document:
 
 ```text
-metaproject import-openapi ./docs/openapi.yaml
-metaproject check
-metaproject build
+npx metaproject import-openapi ./docs/openapi.yaml
+npx metaproject check
+npx metaproject build
 ```
 
 ## Calling operations
@@ -43,20 +43,20 @@ metaproject build
 List the configured operations:
 
 ```text
-metaproject api list
+npx metaproject api list
 ```
 
 Inspect one operation:
 
 ```text
-metaproject api show getUser
+npx metaproject api show getUser
 ```
 
 Execute it using OpenAPI parameter names as flags:
 
 ```text
-metaproject api call getUser --id 123
-metaproject api call createUser --body @user.json
+npx metaproject api call getUser --id 123
+npx metaproject api call createUser --body @user.json
 ```
 
 See [Calling OpenAPI operations from the CLI](api-cli.md) for request bodies, headers, server overrides, authentication, and exit behavior.

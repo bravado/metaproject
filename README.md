@@ -26,10 +26,10 @@ Install Metaproject as a development dependency, then initialize a project:
 
 ```bash
 npm install --save-dev metaproject
-metaproject init
+npx metaproject init
 ```
 
-Documentation examples use the canonical `metaproject` executable name. For a local npm install whose `node_modules/.bin` is not on your shell `PATH`, run the same command as `npm exec -- metaproject ...`.
+Documentation examples use `npx metaproject ...` so the project-local executable is resolved without a global installation.
 
 Model one browser-facing operation in `openapi.yaml`:
 
@@ -70,7 +70,7 @@ components:
 Or, if the application already has a bundled OpenAPI document, import it instead:
 
 ```bash
-metaproject import-openapi ./docs/openapi.yaml
+npx metaproject import-openapi ./docs/openapi.yaml
 ```
 
 Create `components/user-list/component.html`:
@@ -88,8 +88,8 @@ Create `components/user-list/component.html`:
 Validate and build:
 
 ```bash
-metaproject check
-metaproject build
+npx metaproject check
+npx metaproject build
 ```
 
 Embed the generated component in any HTML host:
@@ -161,7 +161,7 @@ The OpenAPI path and component directories are configurable.
 
 ```bash
 npm install --save-dev metaproject
-metaproject init
+npx metaproject init
 ```
 
 Then design the browser-facing API contract and create components. See [Getting started from scratch](docs/getting-started.md) or give your coding agent:
@@ -175,10 +175,10 @@ node_modules/metaproject/skills/project-bootstrap/SKILL.md
 Initialize Metaproject, then import a bundled OpenAPI 3.0/3.1 YAML/JSON file or URL within Core's supported subset:
 
 ```bash
-metaproject init
-metaproject import-openapi ./docs/openapi.yaml
+npx metaproject init
+npx metaproject import-openapi ./docs/openapi.yaml
 # or
-metaproject import-openapi https://example.test/openapi.json
+npx metaproject import-openapi https://example.test/openapi.json
 ```
 
 For an existing multi-file local specification, you can keep it in place and configure:
@@ -333,14 +333,14 @@ Metaproject keeps the API contract deterministic and useful for development prev
 
 ```bash
 # validate representative response examples
-metaproject openapi check-examples
+npx metaproject openapi check-examples
 
 # create/update modeled resources from JSON input
-metaproject openapi upsert-schema --input schema.json
-metaproject openapi upsert-operation --input operation.json
+npx metaproject openapi upsert-schema --input schema.json
+npx metaproject openapi upsert-operation --input operation.json
 
 # import an existing bundled YAML/JSON contract
-metaproject import-openapi SOURCE
+npx metaproject import-openapi SOURCE
 ```
 
 Every modeled operation should have a stable `operationId` and `x-project-id`; reusable schemas should have stable `x-project-id` values. Operations with response bodies should have small representative success examples.
@@ -350,10 +350,10 @@ Every modeled operation should have a stable `operationId` and `x-project-id`; r
 The CLI can execute modeled operations directly by `operationId` using the same operation metadata and REST client semantics as generated components:
 
 ```bash
-metaproject api list
-metaproject api show getUser
-metaproject api call getUser --id 123
-metaproject api call createUser --body @user.json
+npx metaproject api list
+npx metaproject api show getUser
+npx metaproject api call getUser --id 123
+npx metaproject api call createUser --body @user.json
 ```
 
 Path, query, and header parameters become `--PARAM` flags. Use `-H` for arbitrary headers and `--server` to override the first OpenAPI server. Relative OpenAPI server URLs require an absolute `--server` value when called from the CLI.
@@ -363,7 +363,7 @@ See [Calling OpenAPI operations from the CLI](docs/api-cli.md).
 ## Validate the complete project
 
 ```bash
-metaproject check
+npx metaproject check
 ```
 
 `check` validates the shared project model without building assets: OpenAPI resources, examples, component parsing, operation references, duplicate IDs/tags, and related contract diagnostics.
@@ -379,7 +379,7 @@ The runtime entry points `metaproject/components` and `metaproject/data-source` 
 ## Build
 
 ```bash
-metaproject build
+npx metaproject build
 ```
 
 The build emits a shared host runtime and independently loadable browser-native component bundles:
