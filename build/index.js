@@ -138,6 +138,14 @@ export function loadProjectBuildContext(root=process.cwd(),{allowUnsupported=fal
   const scope=String(config.scope || 'default');
   const componentSourceDir=normalizeProjectPath(config.components?.source||DEFAULT_COMPONENT_SOURCE);
   const outputDir=normalizeProjectPath(config.components?.output||DEFAULT_COMPONENT_OUTPUT);
+  // Check output ownership and path boundaries during `metaproject check`
+  // as well as immediately before each generated output write.
+  const outputPaths=resolveBuildOutputPaths({
+    root,outputDir,sourceDir:componentSourceDir,openapiPath,
+    outputApi:config.components?.output_api||`${outputDir}/api.js`,
+    componentTags:[...discoverProjectComponents(root,componentSourceDir).keys()]
+  });
+  assertOwnedGeneratedOutput(outputPaths);
   return{root,config,openapiPath,openapiAbsolute,openapi,resolvedOpenApi,supportDiagnostics,apiRoot,scope,componentSourceDir,outputDir};
 }
 
