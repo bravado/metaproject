@@ -1,0 +1,170 @@
+name: GitHub Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: metaproject-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: Validate release source
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.validate.outputs.version }}
+      tag: ${{ steps.validate.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Validate selected branch or annotated tag
+        id: validate
+        shell: bash
+        run: |
+          if ${{ "${{ github.event_name }}" == "workflow_dispatch" }}; then
+            test "$GITHUB_REF" = "refs/heads/master"
+            node tools/release/validate-release.mjs --rehearsal
+          else
+            test "${{ github.repository }}" = "bravado/metaproject"
+            test "${{ github.event.repository.private }}" = "false"
+            node tools/release/validate-release.mjs --tag "$GITHUB_REF_NAME"
+          fi
+
+  test:
+    name: Release test (Node ${{ matrix.node }})
+    needs: guard
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22.12.0', '24', '26']
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+
+  pack:
+    name: Verify and pack once
+    needs: [guard, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: |
+          npm run check
+          npm run test:examples
+      - name: Pack and verify release archive
+        shell: bash
+        run: |
+          mkdir -p dist
+          npm pack --pack-destination dist
+          node tools/release/verify-package.mjs dist/*.tgz
+          (cd dist && sha256sum -- *.tgz > SHA256SUMS)
+          (cd dist && sha256sum --check SHA256SUMS)
+      - run: node tests/packed-consumer.mjs dist/*.tgz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: metaproject-release-package
+          path: |
+            dist/*.tgz
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30
+
+  browser:
+    name: Chromium checkout and packed-archive smoke
+    needs: pack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - uses: actions/download-artifact@v4
+        with:
+          name: metaproject-release-package
+          path: dist
+      - name: Verify and render the identical tarball
+        run: |
+          (cd dist && sha256sum --check SHA256SUMS)
+          node tools/release/verify-package.mjs dist/*.tgz
+          node tests/packed-browser-smoke.mjs dist/*.tgz
+
+  github-release:
+    name: Publish verified GitHub Release
+    if: ${{ github.event_name == 'push' }}
+    needs: [guard, test, pack, browser]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v4
+        with:
+          name: metaproject-release-package
+          path: dist
+      - name: Check artifact and release uniqueness
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.guard.outputs.tag }}
+          VERSION: ${{ needs.guard.outputs.version }}
+        run: |
+          (cd dist && sha256sum --check SHA256SUMS)
+          node tools/release/verify-package.mjs dist/*.tgz
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; refusing to replace its assets" >&2
+            exit 1
+          fi
+          node tools/release/release-notes.mjs "$VERSION" > dist/RELEASE_NOTES.md
+      - name: Upload a draft, download and verify, then publish
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.guard.outputs.tag }}
+          VERSION: ${{ needs.guard.outputs.version }}
+        run: |
+          gh release create "$TAG" dist/*.tgz dist/SHA256SUMS \
+            --draft --verify-tag \
+            --title "Metaproject $VERSION" --notes-file dist/RELEASE_NOTES.md
+          mkdir -p downloaded
+          gh release download "$TAG" --dir downloaded
+          (cd downloaded && sha256sum --check SHA256SUMS)
+          cmp dist/*.tgz downloaded/*.tgz
+          cmp dist/SHA256SUMS downloaded/SHA256SUMS
+          gh release edit "$TAG" --draft=false
