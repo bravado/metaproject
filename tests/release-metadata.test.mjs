@@ -37,7 +37,7 @@ test('release documents are reachable and describe the current public contract',
   assert.match(contribution,/node tests\/packed-browser-smoke\.mjs dist\/\*\.tgz/);
   const security=fs.readFileSync('SECURITY.md','utf8');
   assert.match(security,/0\.11\.x/);
-  assert.match(security,/https:\/\/github\.com\/metaproject\/core\/security\/advisories\/new/);
+  assert.match(security,/https:\/\/github\.com\/bravado\/metaproject\/security\/advisories\/new/);
   assert.match(security,/issue #22/);
 });
 
@@ -61,6 +61,6 @@ test('tracked files do not refer to the former GitHub repository',()=>{
   const result=spawnSync('git',['ls-files','-z'],{encoding:'utf8'});
   assert.equal(result.status,0,result.stderr||result.stdout);
   for(const file of result.stdout.split('\0').filter(Boolean)){
-    assert.doesNotMatch(fs.readFileSync(file,'utf8'),oldGitHubUrl,'Retired repository reference: '+file);
+    assert.doesNotMatch(fs.readFileSync(file,'utf8').replaceAll('\\',''),oldGitHubUrl,'Retired repository reference: '+file);
   }
 });
