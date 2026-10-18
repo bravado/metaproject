@@ -29,8 +29,15 @@ export function resolveBuildOutputPaths({root,outputDir,sourceDir,openapiPath,ou
   }
 
   const apiRelative=path.relative(output,api).replaceAll('\\','/');
-  const reserved=new Set(['index.js','all.js','manifest.json',...componentTags.map(tag=>tag+'.js')]);
-  if(apiRelative!=='api.js'&&reserved.has(apiRelative))fail('components.output_api',`conflicts with generated artifact ${apiRelative}`);
+  const reserved=new Set(['api.js','index.js','all.js','manifest.json',...componentTags.map(tag=>tag+'.js')]);
+  for(const generated of reserved){
+    if(apiRelative!==generated&&apiRelative.startsWith(generated+'/')){
+      fail('components.output_api',`uses generated file ${generated} as a parent directory`);
+    }
+    if(apiRelative===generated&&generated!=='api.js'){
+      fail('components.output_api',`conflicts with generated artifact ${generated}`);
+    }
+  }
   if(path.extname(apiRelative)!=='.js')fail('components.output_api','must name a .js generated module');
 
   return {root,output,api,apiRelative};
