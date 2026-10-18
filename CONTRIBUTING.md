@@ -67,7 +67,12 @@ are handled separately by the release maintainers.
 mkdir -p dist
 npm pack --pack-destination dist
 node tests/packed-consumer.mjs dist/*.tgz
+node tests/packed-browser-smoke.mjs dist/*.tgz
 ```
+
+   The browser smoke test requires the Chromium installation described above.
+   Run both consumer tests against the **same tarball**. CI also verifies the
+   packed artifact in a separate Chromium job.
 
 5. Open a pull request with a description of behavior, tests, and any
    compatibility implications. Repository maintainers review changes before

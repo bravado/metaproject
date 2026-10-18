@@ -57,10 +57,10 @@ try {
       const values = readJsonInput(input);
       if (subcommand === 'upsert-operation') {
         const result = upsertProjectOperation({ root, values });
-        console.log(`${result.created ? 'Created' : 'Updated'} ${result.method} ${result.operationPath} (${result.operationId})`);
+        console.log(`${result.created ? 'Created' : 'Updated'} ${result.method} ${result.operationPath} (${result.operationId}) in ${result.path}`);
       } else {
         const result = upsertProjectSchema({ root, values });
-        console.log(`${result.created ? 'Created' : 'Updated'} Schema ${result.name}`);
+        console.log(`${result.created ? 'Created' : 'Updated'} Schema ${result.name} in ${result.path}`);
       }
     } else {
       throw new Error('Usage: metaproject openapi check-examples [project-root] | upsert-operation|upsert-schema --input FILE [project-root]');
@@ -74,7 +74,7 @@ try {
     if (!['help','--help','-h'].includes(command)) process.exitCode = 1;
   }
 } catch (error) {
-  const concise=['ApiCliError','MetaprojectConfigError','OpenApiSupportError','MetaprojectProjectError'].includes(error?.name);
+  const concise=['ApiCliError','MetaprojectConfigError','OpenApiSupportError','MetaprojectProjectError','MetaprojectOutputError'].includes(error?.name);
   console.error(concise ? error.message : (error?.stack || error?.message || String(error)));
   process.exitCode = Number.isInteger(error?.exitCode) ? error.exitCode : 1;
 }

@@ -33,7 +33,7 @@ Only `version` is required. The other fields have defaults where noted below.
 | `version` | integer | required | Configuration schema version. 0.11 supports only `1`. |
 | `name` | non-empty string | none | Human-readable project name. |
 | `scope` | string | `default` | Runtime/API scope. Must start with a lowercase letter and contain only lowercase letters, numbers, `.`, `_`, or `-`. Independently distributed projects should choose unique scopes. |
-| `openapi` | non-empty string | `openapi.yaml` | Project-relative path to the root OpenAPI document. |
+| `openapi` | non-empty string | `openapi.yaml` | Project-relative `.yaml`, `.yml` or `.json` contract. `import-openapi` and `openapi upsert-*` write to this selected file. |
 | `components` | object | defaults below | Component source and output paths. |
 | `build` | object | defaults below | Static build options. |
 
@@ -45,7 +45,9 @@ Only `version` is required. The other fields have defaults where noted below.
 | `components.output` | non-empty string | `public/components` | Project-relative generated browser output directory. |
 | `components.output_api` | non-empty string | `<components.output>/api.js` | Output path used by the generated API metadata module/build API result. |
 
-Paths must stay inside the project root. Escaping the root with an absolute path or `..` is rejected when the path is resolved.
+Paths must stay inside the project root. Generated output must be a separate directory that does not contain or overlap component source, the OpenAPI contract, or `metaproject.yaml`. Build output paths cannot traverse symbolic links. `components.output_api` must name a `.js` file **inside** `components.output` and cannot collide with a component module or reserved build entry point.
+
+Builds first compile to an isolated staging directory, then replace the generated output only after successful completion. An existing non-empty output directory must contain a valid Metaproject manifest and no unrecognized files; otherwise the build refuses to overwrite it. Existing generated assets are preserved if compilation fails.
 
 ## `build`
 
@@ -65,3 +67,5 @@ Invalid metaproject.yaml configuration:
 ```
 
 Fix the configuration and rerun `npx metaproject check` before building.
+
+OpenAPI import/mutation commands refuse paths outside the project root, symlinks, generated-output destinations, and existing files that are not OpenAPI documents. Imported documents must be bundled (local `#/` references); keep multi-file contracts in place for normal validation/build rather than importing and flattening them.

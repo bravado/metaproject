@@ -34,6 +34,7 @@ test('release documents are reachable and describe the current public contract',
   assert.match(contribution,/npm ci/);
   assert.match(contribution,/npm test/);
   assert.match(contribution,/npm run test:browser/);
+  assert.match(contribution,/node tests\/packed-browser-smoke\.mjs dist\/\*\.tgz/);
   const security=fs.readFileSync('SECURITY.md','utf8');
   assert.match(security,/0\.11\.x/);
   assert.match(security,/https:\/\/github\.com\/metaproject\/core\/security\/advisories\/new/);

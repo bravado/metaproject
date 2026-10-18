@@ -17,6 +17,11 @@ GitHub release notes are published from the release tag.
   the current runtime ABI v1.
 - Validate OpenAPI 3.0/3.1 within the [supported subset](docs/openapi-support.md),
   including explicit diagnostics for unsupported and partially supported features.
+- Resolve OpenAPI import and schema/operation mutation against the project-configured
+  YAML or JSON contract rather than an implicit root file; protect referenced
+  definitions and write updates atomically.
+- Reject unsafe build destinations and unexpected files in generated directories;
+  stage compilation and preserve the prior output if compilation fails.
 - Initialize, check, build, import OpenAPI documents, mutate schemas/operations,
   and execute modeled API operations with `npx metaproject`.
 - Use the documented `metaproject/components` and `metaproject/data-source`
@@ -25,7 +30,9 @@ GitHub release notes are published from the release tag.
 - Distribute project-bootstrap, API analysis/import, and component-authoring skills
   to support development workflows.
 - Verify package exports, generated assets, example applications, browser
-  behavior, and installation from a packed npm tarball in CI.
+  behavior, and installation from a packed npm tarball in CI. Also verify a
+  clean consumer builds an OpenAPI-backed component from the exact tested tarball
+  and successfully loads and renders it in Chromium.
 
 ### Supported environment
 
