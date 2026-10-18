@@ -437,6 +437,7 @@ Core ships focused skills instead of one monolithic workflow:
 - [Shared runtime and remote components](docs/remote-components.md)
 - [OpenAPI → component workflow](docs/openapi-component-workflow.md)
 - [Runnable product examples](examples/)
+- [Release process and npm trusted publishing](docs/releasing.md)
 
 ## License, contributing, and security
 

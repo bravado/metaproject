@@ -86,3 +86,7 @@ tokens, customer data, or private keys to fixtures, test logs, or examples.
 Use [GitHub Issues](https://github.com/metaproject/core/issues) for ordinary
 bugs and feature requests. Report potential vulnerabilities **privately** by
 following [SECURITY.md](SECURITY.md), not through a public issue.
+
+## Releasing
+
+Maintainers use the [release guide](docs/releasing.md) for npm trusted publisher setup, rehearsals, and recovery. Pull requests and ordinary pushes never publish a package.
