@@ -33,6 +33,10 @@ jobs:
         id: validate
         run: |
           if [[ "${{ github.event_name }}" == "push" ]]; then
+            if [[ "${{ github.event.repository.private }}" != "false" ]]; then
+              echo "Releases require a public repository for npm provenance." >&2
+              exit 1
+            fi
             node tools/release/validate-release.mjs --tag "$GITHUB_REF_NAME"
           else
             test "$GITHUB_REF" = "refs/heads/main"
@@ -147,7 +151,7 @@ jobs:
       - name: Publish only the verified tarball without npm tokens
         env:
           NPM_CONFIG_REGISTRY: https://registry.npmjs.org
-        run: npm publish dist/*.tgz --access public
+        run: npm publish dist/*.tgz --access public --provenance
       - name: Verify registry archive and provenance
         run: node tools/release/registry-check.mjs after "${{ needs.guard.outputs.version }}" dist/*.tgz
 

@@ -12,7 +12,7 @@ The first public release is **0.11.0**. Never publish from a pull request or ord
 
    | Field | Value |
    | --- | --- |
-   | Organization/user | metaproject |
+   | Organization/user | `metaproject` |
    | Repository | core |
    | Workflow filename | release.yml |
    | Environment | leave blank |

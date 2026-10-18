@@ -8,7 +8,7 @@ assert.match(version||'',/^\d+\.\d+\.\d+$/);
 assert.ok(fs.existsSync(filename),'Release archive missing');
 const url='https://registry.npmjs.org/metaproject';
 async function metadata(){
-  const response=await fetch(url,{headers:{Accept:'application/vnd.npm.install-v1+json'},signal:AbortSignal.timeout(25000)});
+  const response=await fetch(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(25000)});
   if(response.status===404)return null;
   if(!response.ok)throw Error('npm registry lookup failed: HTTP '+response.status);
   return response.json();
