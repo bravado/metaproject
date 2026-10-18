@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const [version]=process.argv.slice(2);
+assert.match(version||'',/^\d+\.\d+\.\d+$/,'Expected a release version');
+const content=fs.readFileSync('CHANGELOG.md','utf8');
+const escaped=version.replaceAll('.','\\.');
+const pattern=new RegExp('^## \\['+escaped+'\\].*$','m');
+const start=content.search(pattern);
+assert.ok(start>=0,'CHANGELOG.md missing version '+version);
+const rest=content.slice(start);
+const next=rest.slice(1).search(/\n## \[/);
+const section=next===-1?rest:rest.slice(0,next+1);
+assert.doesNotMatch(section.split('\n')[0],/Planned/i,'Finalize release header before tagging');
+let body=section.replace(/^## [^\n]+\n/,'').trim();
+body=body.replace(/\nThe .*tag and npm package publication are performed separately[\s\S]*$/,'').trim();
+assert.ok(body.length>40,'No meaningful release notes');
+process.stdout.write(body+'\n');
