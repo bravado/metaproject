@@ -8,6 +8,7 @@ import { generateApiModule, collectApiOperations } from '../operations/index.js'
 import { resolveOpenApiRefs, assertOpenApiExamples, collectOpenApiServers, resolveOpenApiServerUrl, validateOpenApiSupport, OpenApiSupportError } from '../openapi/index.js';
 import { compileComponentModule, parseComponentSource, tagFromComponentPath } from '../compiler/index.js';
 import { parseMetaprojectConfig } from '../project/config.js';
+import { resolveBuildOutputPaths, assertOwnedGeneratedOutput, createOutputStage, commitGeneratedOutput } from './output-paths.js';
 
 export const DEFAULT_COMPONENT_SOURCE='components';
 export const DEFAULT_COMPONENT_OUTPUT='public/components';
@@ -18,34 +19,62 @@ export const MANIFEST_SCHEMA_VERSION=1;
 export const BUILD_VERSION=JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..','package.json'),'utf8')).version;
 
 export async function buildProject({root=process.cwd(),minify,sourcemap}={}){
-  root=path.resolve(root);const project=loadProjectBuildContext(root);assertOpenApiExamples(project.resolvedOpenApi);await loadEsbuild();
-  const outputAbsolute=safeProjectPath(root,project.outputDir);fs.rmSync(outputAbsolute,{recursive:true,force:true});fs.mkdirSync(outputAbsolute,{recursive:true});
-  const api=buildProjectApiModule({root,context:project});
+  root=path.resolve(root);
+  const project=loadProjectBuildContext(root);
+  assertOpenApiExamples(project.resolvedOpenApi);
   const components=await buildProjectComponents({root,context:project,minify:minify??project.config.build?.minify??false,sourcemap:sourcemap??project.config.build?.sourcemap??false});
-  return{root,config:project.config,outputDir:project.outputDir,api,components};
+  return {root,config:project.config,outputDir:project.outputDir,api:components.api,components};
 }
 
 export function buildProjectApiModule({root=process.cwd(),outputPath,context}={}){
-  root=path.resolve(root);const project=context||loadProjectBuildContext(root);const targetRelative=normalizeProjectPath(outputPath||project.config.components?.output_api||`${project.outputDir}/api.js`);const targetAbsolute=safeProjectPath(root,targetRelative);const source=generateApiModule({openapi:project.resolvedOpenApi,apiRoot:project.apiRoot});fs.mkdirSync(path.dirname(targetAbsolute),{recursive:true});fs.writeFileSync(targetAbsolute,source);return{root,config:project.config,apiRoot:project.apiRoot,openapiPath:project.openapiPath,outputPath:targetRelative,operations:collectApiOperations(project.resolvedOpenApi),source};
+  root=path.resolve(root);
+  const project=context||loadProjectBuildContext(root);
+  const paths=resolveBuildOutputPaths({
+    root,outputDir:project.outputDir,sourceDir:project.componentSourceDir,openapiPath:project.openapiPath,
+    outputApi:outputPath||project.config.components?.output_api||`${project.outputDir}/api.js`,
+    componentTags:[...discoverProjectComponents(root,project.componentSourceDir).keys()]
+  });
+  assertOwnedGeneratedOutput(paths);
+  // This standalone helper is kept for internal tooling. The full build
+  // generates API metadata inside its staged output before committing it.
+  const source=generateApiModule({openapi:project.resolvedOpenApi,apiRoot:project.apiRoot});
+  fs.mkdirSync(path.dirname(paths.api),{recursive:true});
+  const temporary=paths.api+'.metaproject-'+process.pid+'-'+Date.now();
+  try{fs.writeFileSync(temporary,source,{flag:'wx'});fs.renameSync(temporary,paths.api);}
+  finally{fs.rmSync(temporary,{force:true});}
+  const outputPathRelative=normalizeProjectPath(path.relative(root,paths.api));
+  return {root,config:project.config,apiRoot:project.apiRoot,openapiPath:project.openapiPath,outputPath:outputPathRelative,operations:collectApiOperations(project.resolvedOpenApi),source};
 }
 
 export async function buildProjectComponents({root=process.cwd(),context,minify=false,sourcemap=false}={}){
   root=path.resolve(root);
   const project=context||loadProjectBuildContext(root);
   const components=discoverProjectComponents(root,project.componentSourceDir);
-  const outputAbsolute=safeProjectPath(root,project.outputDir);
-  fs.mkdirSync(outputAbsolute,{recursive:true});
+  const paths=resolveBuildOutputPaths({
+    root,outputDir:project.outputDir,sourceDir:project.componentSourceDir,openapiPath:project.openapiPath,
+    outputApi:project.config.components?.output_api||`${project.outputDir}/api.js`,
+    componentTags:[...components.keys()]
+  });
+  assertOwnedGeneratedOutput(paths);
+  const esbuild=await loadEsbuild();
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),'metaproject-build-'));
+  let outputAbsolute=null;
   const scope=project.scope;
   const operations=Object.fromEntries(collectApiOperations(project.resolvedOpenApi).map(operation=>[operation.operationId,operation]));
-  const esbuild=await loadEsbuild();
   const buildOptions={bundle:true,splitting:false,format:'esm',platform:'browser',target:['es2022'],minify:Boolean(minify),sourcemap:Boolean(sourcemap),logLevel:'silent'};
   try{
-    const manifest={version:MANIFEST_SCHEMA_VERSION,generatedBy:'metaproject',generatedByVersion:BUILD_VERSION,scope,apiRoot:project.apiRoot,openapi:project.openapiPath,runtime:'index.js',runtimeAbi:RUNTIME_ABI_VERSION,components:{}};
+    outputAbsolute=createOutputStage(paths.output);
+    const manifest={version:MANIFEST_SCHEMA_VERSION,generatedBy:'metaproject',generatedByVersion:BUILD_VERSION,scope,apiRoot:project.apiRoot,openapi:project.openapiPath,runtime:'index.js',runtimeAbi:RUNTIME_ABI_VERSION,outputApi:paths.apiRelative,components:{}};
     const runtimeEntry=path.join(temp,'runtime-entry.js');
     fs.writeFileSync(runtimeEntry,runtimeEntrySource({scope,apiRoot:project.apiRoot,operations}));
     await esbuild.build({...buildOptions,entryPoints:[runtimeEntry],outfile:path.join(outputAbsolute,'index.js'),plugins:[runtimeResolver()]});
-    fs.writeFileSync(path.join(outputAbsolute,'api.js'),generateApiModule({openapi:project.resolvedOpenApi,apiRoot:project.apiRoot}));
+    const apiSource=generateApiModule({openapi:project.resolvedOpenApi,apiRoot:project.apiRoot});
+    fs.writeFileSync(path.join(outputAbsolute,'api.js'),apiSource);
+    if(paths.apiRelative!=='api.js'){
+      const target=path.join(outputAbsolute,paths.apiRelative);
+      fs.mkdirSync(path.dirname(target),{recursive:true});
+      fs.writeFileSync(target,apiSource);
+    }
 
     // Compile every component before bundling so dependencies can be included
     // in each individually distributable file. No sibling JS files are required.
@@ -70,9 +99,15 @@ export async function buildProjectComponents({root=process.cwd(),context,minify=
     fs.writeFileSync(path.join(outputAbsolute,'all.js'),"import './index.js';\n"+tags.map(tag=>"import './"+tag+".js';").join('\n')+'\n');
     fs.writeFileSync(path.join(outputAbsolute,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
     assertBrowserNativeOutput(outputAbsolute);
-    const files=walk(outputAbsolute).map(file=>normalizeProjectPath(path.relative(root,file))).sort();
-    return{sourceDir:project.componentSourceDir,outputDir:project.outputDir,count:components.size,tags,manifest,files};
-  }finally{fs.rmSync(temp,{recursive:true,force:true});}
+    const files=walk(outputAbsolute).map(file=>normalizeProjectPath(path.join(project.outputDir,path.relative(outputAbsolute,file)))).sort();
+    commitGeneratedOutput(outputAbsolute,paths.output);
+    outputAbsolute=null;
+    const api={root,config:project.config,apiRoot:project.apiRoot,openapiPath:project.openapiPath,outputPath:normalizeProjectPath(path.relative(root,paths.api)),operations:collectApiOperations(project.resolvedOpenApi),source:apiSource};
+    return{sourceDir:project.componentSourceDir,outputDir:project.outputDir,count:components.size,tags,manifest,files,api};
+  }finally{
+    fs.rmSync(temp,{recursive:true,force:true});
+    if(outputAbsolute!==null)fs.rmSync(outputAbsolute,{recursive:true,force:true});
+  }
 }
 
 export function discoverProjectComponents(root,sourceDir=DEFAULT_COMPONENT_SOURCE){root=path.resolve(root);const sourceAbsolute=safeProjectPath(root,sourceDir);const out=new Map();if(!fs.existsSync(sourceAbsolute))return out;for(const htmlPath of walk(sourceAbsolute).filter(file=>path.basename(file)==='component.html')){const tag=tagFromComponentPath(htmlPath);if(out.has(tag))throw new Error(`Duplicate Metaproject component tag <${tag}>.`);const dir=path.dirname(htmlPath);const scriptPath=['component.ts','component.js'].map(name=>path.join(dir,name)).find(file=>fs.existsSync(file))||null;const stylePath=path.join(dir,'style.css');out.set(tag,{tag,htmlPath,relativeHtmlPath:normalizeProjectPath(path.relative(root,htmlPath)),scriptPath,stylePath:fs.existsSync(stylePath)?stylePath:null});}return out;}

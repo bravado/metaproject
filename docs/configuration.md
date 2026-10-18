@@ -45,7 +45,9 @@ Only `version` is required. The other fields have defaults where noted below.
 | `components.output` | non-empty string | `public/components` | Project-relative generated browser output directory. |
 | `components.output_api` | non-empty string | `<components.output>/api.js` | Output path used by the generated API metadata module/build API result. |
 
-Paths must stay inside the project root. Escaping the root with an absolute path or `..` is rejected when the path is resolved.
+Paths must stay inside the project root. Generated output must be a separate directory that does not contain or overlap component source, the OpenAPI contract, or `metaproject.yaml`. Build output paths cannot traverse symbolic links. `components.output_api` must name a `.js` file **inside** `components.output` and cannot collide with a component module or reserved build entry point.
+
+Builds first compile to an isolated staging directory, then replace the generated output only after successful completion. An existing non-empty output directory must contain a valid Metaproject manifest and no unrecognized files; otherwise the build refuses to overwrite it. Existing generated assets are preserved if compilation fails.
 
 ## `build`
 
