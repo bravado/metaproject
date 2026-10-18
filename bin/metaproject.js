@@ -57,10 +57,10 @@ try {
       const values = readJsonInput(input);
       if (subcommand === 'upsert-operation') {
         const result = upsertProjectOperation({ root, values });
-        console.log(`${result.created ? 'Created' : 'Updated'} ${result.method} ${result.operationPath} (${result.operationId})`);
+        console.log(`${result.created ? 'Created' : 'Updated'} ${result.method} ${result.operationPath} (${result.operationId}) in ${result.path}`);
       } else {
         const result = upsertProjectSchema({ root, values });
-        console.log(`${result.created ? 'Created' : 'Updated'} Schema ${result.name}`);
+        console.log(`${result.created ? 'Created' : 'Updated'} Schema ${result.name} in ${result.path}`);
       }
     } else {
       throw new Error('Usage: metaproject openapi check-examples [project-root] | upsert-operation|upsert-schema --input FILE [project-root]');

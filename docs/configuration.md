@@ -33,7 +33,7 @@ Only `version` is required. The other fields have defaults where noted below.
 | `version` | integer | required | Configuration schema version. 0.11 supports only `1`. |
 | `name` | non-empty string | none | Human-readable project name. |
 | `scope` | string | `default` | Runtime/API scope. Must start with a lowercase letter and contain only lowercase letters, numbers, `.`, `_`, or `-`. Independently distributed projects should choose unique scopes. |
-| `openapi` | non-empty string | `openapi.yaml` | Project-relative path to the root OpenAPI document. |
+| `openapi` | non-empty string | `openapi.yaml` | Project-relative `.yaml`, `.yml` or `.json` contract. `import-openapi` and `openapi upsert-*` write to this selected file. |
 | `components` | object | defaults below | Component source and output paths. |
 | `build` | object | defaults below | Static build options. |
 
@@ -67,3 +67,5 @@ Invalid metaproject.yaml configuration:
 ```
 
 Fix the configuration and rerun `npx metaproject check` before building.
+
+OpenAPI import/mutation commands refuse paths outside the project root, symlinks, generated-output destinations, and existing files that are not OpenAPI documents. Imported documents must be bundled (local `#/` references); keep multi-file contracts in place for normal validation/build rather than importing and flattening them.

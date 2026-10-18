@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
-import { createDefaultOpenApiSource } from '../project/index.js';
+import { resolveProjectOpenApiTarget, readProjectOpenApi, writeProjectOpenApi } from './project-target.js';
 import { mutateOperationDocument, mutateSchemaDocument } from './mutation-model.js';
 
 const require = createRequire(import.meta.url);
@@ -12,9 +12,8 @@ const METHODS = ['get','put','post','delete','options','head','patch','trace'];
 /** Deterministically create or update one local OpenAPI operation. */
 export function upsertProjectOperation({ root = process.cwd(), values }) {
   root = path.resolve(root);
-  const file = path.join(root, 'openapi.yaml');
-  const source = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : createDefaultOpenApiSource({ title:'Metaproject API' });
-  const document = yaml().parse(source) || {};
+  const target = resolveProjectOpenApiTarget(root);
+  const document = readProjectOpenApi(target);
   const requestedId = String(values?.previousOperationId || values?.operationId || '').trim();
   if (!values?.operationId) throw new Error('Operation input requires operationId.');
   const existing = requestedId ? findOperation(document, requestedId) : null;
@@ -31,19 +30,19 @@ export function upsertProjectOperation({ root = process.cwd(), values }) {
     id
   };
   mutateOperationDocument(document, existing, next);
-  fs.writeFileSync(file, yaml().stringify(document));
-  return { path:'openapi.yaml', operationId:next.operationId, method:String(next.method).toUpperCase(), operationPath:next.path, id, created:!existing };
+  writeProjectOpenApi(target,document);
+  return { path:target.relative, operationId:next.operationId, method:String(next.method).toUpperCase(), operationPath:next.path, id, created:!existing };
 }
 
 /** Deterministically create or update one local OpenAPI schema. */
 export function upsertProjectSchema({ root = process.cwd(), values }) {
   root = path.resolve(root);
-  const file = path.join(root, 'openapi.yaml');
-  const source = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : createDefaultOpenApiSource({ title:'Metaproject API' });
-  const document = yaml().parse(source) || {};
+  const target = resolveProjectOpenApiTarget(root);
+  const document = readProjectOpenApi(target);
   if (!values?.name) throw new Error('Schema input requires name.');
   const previousName = values.previousName || values.name;
   const existing = document?.components?.schemas?.[previousName];
+  if(existing?.$ref)throw new Error(`Schema ${previousName} is a $ref; edit the referenced definition directly.`);
   const id = values.id || existing?.['x-project-id'] || randomUUID();
   const next = {
     name: values.name,
@@ -52,8 +51,8 @@ export function upsertProjectSchema({ root = process.cwd(), values }) {
     id
   };
   mutateSchemaDocument(document, existing ? previousName : null, next);
-  fs.writeFileSync(file, yaml().stringify(document));
-  return { path:'openapi.yaml', name:next.name, id, created:!existing };
+  writeProjectOpenApi(target,document);
+  return { path:target.relative, name:next.name, id, created:!existing };
 }
 
 export function findOperation(document, operationId) {
@@ -98,16 +97,17 @@ export function normalizeImportedOpenApi(document) {
 
 /**
  * Import an existing bundled OpenAPI 3.x document from either a local file or
- * an HTTP(S) URL. The source is copied into the Metaproject-owned openapi.yaml
+ * an HTTP(S) URL. The source is copied into the configured OpenAPI file
  * and normalized with stable operation/schema IDs.
  */
 export async function importProjectOpenApi({ root = process.cwd(), source, url, force = false, fetchImpl = globalThis.fetch } = {}) {
   const requested=source ?? url;
   if (!requested) throw new Error('OpenAPI import requires a file path or URL.');
   root = path.resolve(root);
-  const file = path.join(root, 'openapi.yaml');
-  if (fs.existsSync(file) && !force && !isEmptyLocalSpec(fs.readFileSync(file, 'utf8'))) {
-    throw new Error('openapi.yaml already contains modeled API resources. Re-run with --force to replace it.');
+  const target = resolveProjectOpenApiTarget(root);
+  const current = readProjectOpenApi(target);
+  if (fs.existsSync(target.file) && !force && !isEmptyLocalSpec(current)) {
+    throw new Error(`${target.relative} already contains modeled API resources. Re-run with --force to replace it.`);
   }
 
   const loaded=await loadImportSource(requested,{fetchImpl});
@@ -115,9 +115,9 @@ export async function importProjectOpenApi({ root = process.cwd(), source, url, 
   rejectExternalRefs(document);
   normalizeImportedOpenApi(document);
   document['x-metaproject-import-source'] = loaded.label;
-  fs.writeFileSync(file, yaml().stringify(document));
+  writeProjectOpenApi(target,document);
   return {
-    path:'openapi.yaml',
+    path:target.relative,
     source:loaded.label,
     url:loaded.kind==='url'?loaded.label:null,
     operations:countOperations(document),
@@ -150,7 +150,7 @@ function generatedOperationId(method, operationPath) {
   return `${method.toLowerCase()}${tail[0].toUpperCase()}${tail.slice(1)}`;
 }
 function countOperations(document){let count=0;for(const item of Object.values(document?.paths||{}))for(const method of METHODS)if(item?.[method]&&typeof item[method]==='object')count++;return count;}
-function isEmptyLocalSpec(source){try{const doc=yaml().parse(source)||{};return countOperations(doc)===0&&Object.keys(doc?.components?.schemas||{}).length===0;}catch{return false;}}
+function isEmptyLocalSpec(doc){return countOperations(doc)===0&&Object.keys(doc?.components?.schemas||{}).length===0;}
 function rejectExternalRefs(value){
   if(Array.isArray(value)){for(const child of value)rejectExternalRefs(child);return;}
   if(!value||typeof value!=='object')return;
