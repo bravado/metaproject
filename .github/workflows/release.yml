@@ -33,7 +33,7 @@ jobs:
         id: validate
         shell: bash
         run: |
-          if ${{ "${{ github.event_name }}" == "workflow_dispatch" }}; then
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
             test "$GITHUB_REF" = "refs/heads/master"
             node tools/release/validate-release.mjs --rehearsal
           else
