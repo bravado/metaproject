@@ -1,0 +1,185 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: metaproject-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: Validate release source
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.validate.outputs.version }}
+      tag: ${{ steps.validate.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Validate version and release tag
+        id: validate
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            node tools/release/validate-release.mjs --tag "$GITHUB_REF_NAME"
+          else
+            test "$GITHUB_REF" = "refs/heads/main"
+            node tools/release/validate-release.mjs --rehearsal
+          fi
+
+  test:
+    name: Release test (Node ${{ matrix.node }})
+    needs: guard
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22.12.0', '24', '26']
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          package-manager-cache: false
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+
+  pack:
+    name: Pack exactly once and verify
+    needs: [guard, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm ci --no-audit --no-fund
+      - run: |
+          npm run check
+          npm run test:examples
+      - name: Pack and verify
+        run: |
+          mkdir -p dist
+          npm pack --pack-destination dist --json > dist/pack.json
+          node tools/release/verify-package.mjs dist/*.tgz
+          sha256sum dist/*.tgz > dist/SHA256SUMS
+      - run: node tests/packed-consumer.mjs dist/*.tgz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: metaproject-release-package
+          path: |
+            dist/*.tgz
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30
+
+  browser:
+    name: Release Chromium and installed-tarball smoke
+    needs: pack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - uses: actions/download-artifact@v4
+        with:
+          name: metaproject-release-package
+          path: dist
+      - run: |
+          sha256sum --check dist/SHA256SUMS
+          node tools/release/verify-package.mjs dist/*.tgz
+          node tests/packed-browser-smoke.mjs dist/*.tgz
+
+  publish:
+    name: Publish exact tarball through npm OIDC
+    if: ${{ github.event_name == 'push' }}
+    needs: [guard, pack, browser]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Install npm 11 with trusted publishing
+        run: |
+          npm install --global npm@11
+          node tools/release/check-npm-version.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          name: metaproject-release-package
+          path: dist
+      - name: Verify exact artifact and registry availability
+        run: |
+          sha256sum --check dist/SHA256SUMS
+          node tools/release/verify-package.mjs dist/*.tgz
+          node tools/release/registry-check.mjs before "${{ needs.guard.outputs.version }}" dist/*.tgz
+      - name: Publish only the verified tarball without npm tokens
+        env:
+          NPM_CONFIG_REGISTRY: https://registry.npmjs.org
+        run: npm publish dist/*.tgz --access public
+      - name: Verify registry archive and provenance
+        run: node tools/release/registry-check.mjs after "${{ needs.guard.outputs.version }}" dist/*.tgz
+
+  github-release:
+    name: Create GitHub Release after npm succeeds
+    if: ${{ github.event_name == 'push' }}
+    needs: [guard, pack, browser, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: metaproject-release-package
+          path: dist
+      - name: Verify archive and generate notes
+        run: |
+          sha256sum --check dist/SHA256SUMS
+          node tools/release/verify-package.mjs dist/*.tgz
+          node tools/release/release-notes.mjs "${{ needs.guard.outputs.version }}" > dist/release-notes.md
+      - name: Create release for published npm version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ needs.guard.outputs.tag }}" dist/*.tgz \
+            --verify-tag \
+            --title "Metaproject ${{ needs.guard.outputs.version }}" \
+            --notes-file dist/release-notes.md
