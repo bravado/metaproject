@@ -9,9 +9,9 @@ test('public package has consistent metadata and license',()=>{
   assert.equal(pkg.name,'metaproject');
   assert.equal(pkg.license,'MIT');
   assert.match(pkg.description,/OpenAPI/);
-  assert.deepEqual(pkg.repository,{type:'git',url:'git+https://github.com/metaproject/core.git'});
-  assert.equal(pkg.homepage,'https://github.com/metaproject/core#readme');
-  assert.equal(pkg.bugs.url,'https://github.com/metaproject/core/issues');
+  assert.deepEqual(pkg.repository,{type:'git',url:'git+https://github.com/bravado/metaproject.git'});
+  assert.equal(pkg.homepage,'https://github.com/bravado/metaproject#readme');
+  assert.equal(pkg.bugs.url,'https://github.com/bravado/metaproject/issues');
   assert.ok(pkg.keywords.includes('openapi'));
   assert.ok(pkg.keywords.includes('web-components'));
   assert.match(fs.readFileSync('LICENSE','utf8'),/^MIT License/);
@@ -37,7 +37,7 @@ test('release documents are reachable and describe the current public contract',
   assert.match(contribution,/node tests\/packed-browser-smoke\.mjs dist\/\*\.tgz/);
   const security=fs.readFileSync('SECURITY.md','utf8');
   assert.match(security,/0\.11\.x/);
-  assert.match(security,/https:\/\/github\.com\/metaproject\/core\/security\/advisories\/new/);
+  assert.match(security,/https:\/\/github\.com\/bravado\/metaproject\/security\/advisories\/new/);
   assert.match(security,/issue #22/);
 });
 
@@ -51,5 +51,16 @@ test('npm pack dry run includes all release metadata and documents',()=>{
   const included=new Set(info.files.map(x=>x.path));
   for(const file of ['package.json','README.md','LICENSE','CHANGELOG.md','CONTRIBUTING.md','SECURITY.md']){
     assert.ok(included.has(file),file+' missing from npm tarball');
+  }
+});
+
+test('tracked files do not refer to the former GitHub repository',()=>{
+  // Build the retired path from pieces so this guard does not flag itself.
+  const retiredPath=['metaproject','core'].join('/');
+  const oldGitHubUrl=new RegExp('(?:github\\.com[:/]|raw\\.githubusercontent\\.com/)'+retiredPath+'(?:[/#?]|\\b)','i');
+  const result=spawnSync('git',['ls-files','-z'],{encoding:'utf8'});
+  assert.equal(result.status,0,result.stderr||result.stdout);
+  for(const file of result.stdout.split('\0').filter(Boolean)){
+    assert.doesNotMatch(fs.readFileSync(file,'utf8').replaceAll('\\',''),oldGitHubUrl,'Retired repository reference: '+file);
   }
 });

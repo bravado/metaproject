@@ -5,11 +5,11 @@ This path is for a new application or a new API/UI surface where you control the
 ## 1. Install and initialize
 
 ```bash
-npm install --save-dev metaproject
+npm install --save-dev https://github.com/bravado/metaproject/releases/download/v0.11.0/metaproject-0.11.0.tgz
 npx metaproject init
 ```
 
-These docs use `npx metaproject ...` so the project-local executable is resolved without a global installation.
+The GitHub Release tarball becomes available only after `v0.11.0` is published. Run `npx --no-install metaproject ...` after installation to avoid an npm registry fallback. The shorter `npx metaproject ...` shown below resolves the locally installed CLI.
 
 This creates the Core-owned project foundation without imposing a frontend application framework:
 

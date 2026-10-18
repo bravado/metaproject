@@ -97,7 +97,8 @@ test('all local Markdown links resolve',()=>{
 
 test('README and getting-started describe a complete first-success path',()=>{
   for(const source of [readme,gettingStarted]){
-    assert.match(source,/npm install --save-dev metaproject/);
+    assert.match(source,/npm install --save-dev https:\/\/github\.com\/bravado\/metaproject\/releases\/download\/v0\.11\.0\/metaproject-0\.11\.0\.tgz/);
+    assert.match(source,/npx --no-install metaproject/);
     assert.match(source,/npx metaproject init/);
     assert.match(source,/npx metaproject check/);
     assert.match(source,/npx metaproject build/);

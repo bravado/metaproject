@@ -49,8 +49,8 @@ try {
 
   const packageJson=JSON.parse(fs.readFileSync(path.join(installedRoot,'package.json'),'utf8'));
   assert.equal(packageJson.license,'MIT');
-  assert.equal(packageJson.repository.url,'git+https://github.com/metaproject/core.git');
-  assert.equal(packageJson.bugs.url,'https://github.com/metaproject/core/issues');
+  assert.equal(packageJson.repository.url,'git+https://github.com/bravado/metaproject.git');
+  assert.equal(packageJson.bugs.url,'https://github.com/bravado/metaproject/issues');
   for(const file of ['LICENSE','CHANGELOG.md','CONTRIBUTING.md','SECURITY.md']){
     assertExists(path.join('node_modules','metaproject',file));
     assert.match(fs.readFileSync(path.join(installedRoot,file),'utf8'),/Metaproject|MIT License/);
@@ -64,7 +64,7 @@ try {
 
   for(const source of [installedReadme,installedGettingStarted]){
     assert.match(source,/\bnpx\s+metaproject\b/);
-    assert.match(source,/npm install --save-dev metaproject/);
+    assert.match(source,/npm install --save-dev https:\/\/github\.com\/bravado\/metaproject\/releases\/download\/v0\.11\.0\/metaproject-0\.11\.0\.tgz/);
     assert.match(source,/npx metaproject init/);
     assert.match(source,/npx metaproject check/);
     assert.match(source,/npx metaproject build/);
