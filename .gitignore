@@ -1,0 +1,20 @@
+# Local dependencies, builds and test reports
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+**/public/components/
+npm-debug.log*
+.DS_Store
+
+# Local secrets and private key material
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+*.pfx
+*.kdbx
