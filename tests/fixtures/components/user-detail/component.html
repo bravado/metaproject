@@ -1,0 +1,7 @@
+<title>User Details</title>
+<component-property name="id" type="integer" required example="1"></component-property>
+<data-source request="getUser" id=${id} @edit=${event => navigate('user-edit', { id: event.detail.resource.id })}>
+  <data-label field="name"></data-label>
+  <status-pill></status-pill>
+  <button data-action="edit">Edit</button>
+</data-source>

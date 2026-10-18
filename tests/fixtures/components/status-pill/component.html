@@ -1,0 +1,7 @@
+<title>Status Pill</title>
+
+<component-property name="resource" type="User" context></component-property>
+
+<span class=${resource?.active ? 'active' : 'inactive'}>
+  ${resource?.active ? 'Active' : 'Disabled'}
+</span>

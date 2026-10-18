@@ -1,0 +1,17 @@
+openapi: 3.1.0
+info:
+  title: Remote ref
+  version: '1'
+paths:
+  /users:
+    get:
+      operationId: listUsers
+      x-project-id: op-list-users
+      responses:
+        '200':
+          description: Users
+          content:
+            application/json:
+              schema:
+                $ref: https://schemas.example.test/user.yaml#/User
+              example: [{ id: 1 }]

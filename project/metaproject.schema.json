@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Metaproject project configuration",
+  "description": "Canonical schema for metaproject.yaml.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Metaproject configuration schema version."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable project name."
+    },
+    "scope": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9._-]*$",
+      "x-error-message": "must be a lowercase identifier containing letters, numbers, dots, underscores, or hyphens."
+    },
+    "openapi": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Project-relative path to the root OpenAPI document."
+    },
+    "components": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Project-relative component source directory."
+        },
+        "output": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Project-relative generated component output directory."
+        },
+        "output_api": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Project-relative output path for the generated API metadata module."
+        }
+      }
+    },
+    "build": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "minify": {
+          "type": "boolean"
+        },
+        "sourcemap": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

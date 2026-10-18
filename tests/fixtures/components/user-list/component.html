@@ -1,0 +1,6 @@
+<title>User List</title>
+<data-source request="listUsers">
+  <data-table @open=${event => navigate('user-detail', { id: event.detail.resource.id })}>
+    <table><tbody><template data-row><tr><td><data-label field="name"></data-label></td><td><button data-action="open">Open</button></td></tr></template></tbody></table>
+  </data-table>
+</data-source>

@@ -1,0 +1,13 @@
+{
+  "name": "metaproject-example-existing-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "metaproject check",
+    "build": "metaproject build",
+    "start": "node server.mjs"
+  },
+  "devDependencies": {
+    "metaproject": "file:../.."
+  }
+}

@@ -1,0 +1,7 @@
+version: 1
+name: Billing remote components
+scope: billing
+openapi: openapi.yaml
+components:
+  source: components
+  output: public/components

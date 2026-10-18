@@ -1,0 +1,13 @@
+{
+  "name": "metaproject-example-remote-component",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "metaproject check host && metaproject check remote",
+    "build": "metaproject build host && metaproject build remote",
+    "start": "node server.mjs"
+  },
+  "devDependencies": {
+    "metaproject": "file:../.."
+  }
+}
