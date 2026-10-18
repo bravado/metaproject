@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { buildProject, buildProjectApiModule, buildProjectComponents } from '../build/index.js';
+import { checkProject } from '../project/check.js';
+import { spawnSync } from 'node:child_process';
 
 function fixture(output='public/components',additionalConfig=''){
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'metaproject-safe-output-'));
@@ -183,6 +185,18 @@ test('independent component and API builders enforce the same safety checks',asy
     setOutput(root,'.');
     await assert.rejects(buildProjectComponents({root}),/cannot be the project root/);
     assert.throws(()=>buildProjectApiModule({root}),/cannot be the project root/);
+    ensureUnchanged(root);
+  });
+});
+
+test('metaproject check detects unsafe output before build and reports a concise path error',async()=>{
+  await withFixture(async(root)=>{
+    setOutput(root,'.');
+    assert.throws(()=>checkProject({root}),/Unsafe Metaproject output path components.output: cannot be the project root/);
+    const result=spawnSync(process.execPath,[path.resolve('bin/metaproject.js'),'check',root],{encoding:'utf8'});
+    assert.equal(result.status,1);
+    assert.match(result.stderr,/Unsafe Metaproject output path components.output/);
+    assert.doesNotMatch(result.stderr,/\\n\\s+at /);
     ensureUnchanged(root);
   });
 });

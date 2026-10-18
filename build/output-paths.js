@@ -140,4 +140,11 @@ function listEntries(dir,relative=''){
   }
   return out;
 }
-function fail(field,why){throw new Error(`Unsafe Metaproject output path ${field}: ${why}.`);}
+export class MetaprojectOutputError extends Error {
+  constructor(field,why){
+    super(`Unsafe Metaproject output path ${field}: ${why}.`);
+    this.name='MetaprojectOutputError';
+    this.field=field;
+  }
+}
+function fail(field,why){throw new MetaprojectOutputError(field,why);}
