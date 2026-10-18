@@ -89,7 +89,7 @@ components:
 });
 
 test('refuses API output outside generated directory and reserved module names',async()=>{
-  for(const api of ['openapi.yaml','components/user-list/component.html','public/components/index.js','public/components/user-list.js','../outside.js']){
+  for(const api of ['openapi.yaml','components/user-list/component.html','public/components/index.js','public/components/user-list.js','public/components/index.js/nested.js','public/components/api.js/nested.js','../outside.js']){
     await withFixture(async(root)=>{
       setOutput(root,'public/components',`  output_api: ${api}\n`);
       await assert.rejects(buildProject({root}),/Unsafe Metaproject output path components.output_api/);
