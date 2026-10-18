@@ -74,7 +74,7 @@ try {
     if (!['help','--help','-h'].includes(command)) process.exitCode = 1;
   }
 } catch (error) {
-  const concise=['ApiCliError','MetaprojectConfigError','OpenApiSupportError','MetaprojectProjectError'].includes(error?.name);
+  const concise=['ApiCliError','MetaprojectConfigError','OpenApiSupportError','MetaprojectProjectError','MetaprojectOutputError'].includes(error?.name);
   console.error(concise ? error.message : (error?.stack || error?.message || String(error)));
   process.exitCode = Number.isInteger(error?.exitCode) ? error.exitCode : 1;
 }
