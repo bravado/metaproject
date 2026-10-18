@@ -40,6 +40,6 @@ GitHub release notes are published from the release tag.
 - Browser output targeting ES2022 with modern browser platform APIs.
 - Optional Vite integration for Vite 6 or newer.
 
-The `0.11.0` tag and npm package publication are performed separately as part
-of final release preparation. This entry describes the intended first public
-contract and does not indicate that 0.11.0 has already been published.
+The first public `0.11.0` build will be distributed solely as a checksum-verified
+GitHub Releases tarball. This entry describes the intended release contract and
+does not indicate that `v0.11.0` has already been published.

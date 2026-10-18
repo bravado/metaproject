@@ -25,11 +25,11 @@ The generated components are ordinary browser custom elements. Use them in plain
 Install Metaproject as a development dependency, then initialize a project:
 
 ```bash
-npm install --save-dev metaproject
+npm install --save-dev https://github.com/bravado/metaproject/releases/download/v0.11.0/metaproject-0.11.0.tgz
 npx metaproject init
 ```
 
-Documentation examples use `npx metaproject ...` so the project-local executable is resolved without a global installation.
+The GitHub Release tarball becomes available only after `v0.11.0` is published. Run `npx --no-install metaproject ...` after installation to avoid an npm registry fallback. The shorter `npx metaproject ...` shown below resolves the locally installed CLI.
 
 Model one browser-facing operation in `openapi.yaml`:
 
@@ -160,7 +160,7 @@ The OpenAPI path and component directories are configurable.
 ### New project
 
 ```bash
-npm install --save-dev metaproject
+npm install --save-dev https://github.com/bravado/metaproject/releases/download/v0.11.0/metaproject-0.11.0.tgz
 npx metaproject init
 ```
 
@@ -437,6 +437,8 @@ Core ships focused skills instead of one monolithic workflow:
 - [Shared runtime and remote components](docs/remote-components.md)
 - [OpenAPI → component workflow](docs/openapi-component-workflow.md)
 - [Runnable product examples](examples/)
+
+For release policy and installation details, see [GitHub Releases guide](docs/releasing.md).
 
 ## License, contributing, and security
 
