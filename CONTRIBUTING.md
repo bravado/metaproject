@@ -83,6 +83,6 @@ tokens, customer data, or private keys to fixtures, test logs, or examples.
 
 ## Bug reports and security issues
 
-Use [GitHub Issues](https://github.com/metaproject/core/issues) for ordinary
+Use [GitHub Issues](https://github.com/bravado/metaproject/issues) for ordinary
 bugs and feature requests. Report potential vulnerabilities **privately** by
 following [SECURITY.md](SECURITY.md), not through a public issue.

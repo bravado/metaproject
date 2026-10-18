@@ -64,11 +64,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/metaproject/core.git"
+    "url": "git+https://github.com/bravado/metaproject.git"
   },
-  "homepage": "https://github.com/metaproject/core#readme",
+  "homepage": "https://github.com/bravado/metaproject#readme",
   "bugs": {
-    "url": "https://github.com/metaproject/core/issues"
+    "url": "https://github.com/bravado/metaproject/issues"
   },
   "keywords": [
     "openapi",

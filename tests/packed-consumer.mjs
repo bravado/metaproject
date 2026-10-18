@@ -49,8 +49,8 @@ try {
 
   const packageJson=JSON.parse(fs.readFileSync(path.join(installedRoot,'package.json'),'utf8'));
   assert.equal(packageJson.license,'MIT');
-  assert.equal(packageJson.repository.url,'git+https://github.com/metaproject/core.git');
-  assert.equal(packageJson.bugs.url,'https://github.com/metaproject/core/issues');
+  assert.equal(packageJson.repository.url,'git+https://github.com/bravado/metaproject.git');
+  assert.equal(packageJson.bugs.url,'https://github.com/bravado/metaproject/issues');
   for(const file of ['LICENSE','CHANGELOG.md','CONTRIBUTING.md','SECURITY.md']){
     assertExists(path.join('node_modules','metaproject',file));
     assert.match(fs.readFileSync(path.join(installedRoot,file),'utf8'),/Metaproject|MIT License/);
