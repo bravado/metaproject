@@ -42,7 +42,7 @@ export function upsertProjectSchema({ root = process.cwd(), values }) {
   if (!values?.name) throw new Error('Schema input requires name.');
   const previousName = values.previousName || values.name;
   const existing = document?.components?.schemas?.[previousName];
-  if(existing?.$ref)throw new Error(`Schema ${previousName} references another file; edit that definition directly.`);
+  if(existing?.$ref)throw new Error(`Schema ${previousName} is a $ref; edit the referenced definition directly.`);
   const id = values.id || existing?.['x-project-id'] || randomUUID();
   const next = {
     name: values.name,
