@@ -73,7 +73,7 @@ jobs:
 
   browser:
     name: Browser E2E (Chromium)
-    needs: test
+    needs: [test, verify]
     runs-on: ubuntu-latest
 
     steps:
@@ -94,3 +94,12 @@ jobs:
 
       - name: Browser E2E
         run: npm run test:browser
+
+      - name: Download verified npm artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: metaproject-npm-package
+          path: dist
+
+      - name: Smoke-test packed artifact in Chromium
+        run: node tests/packed-browser-smoke.mjs dist/*.tgz
