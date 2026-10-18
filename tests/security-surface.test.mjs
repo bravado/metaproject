@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
+import YAML from 'yaml';
 
 const tracked=execFileSync('git',['ls-files','-z'],{encoding:'utf8'})
   .split('\0').filter(Boolean);
@@ -39,5 +40,32 @@ test('declared dependency licenses are present and recognized for legal review',
     if(name==='')continue;
     assert.ok(declared.has(entry.license),
       'New or missing dependency license needs legal review: '+name);
+  }
+});
+
+test('CI does not persist repository credentials',()=>{
+  const ci=YAML.parse(fs.readFileSync('.github/workflows/ci.yml','utf8'));
+  assert.equal(ci.permissions.contents,'read');
+  let checkouts=0;
+  for(const job of Object.values(ci.jobs)){
+    for(const step of job.steps){
+      if(!step.uses?.startsWith('actions/checkout@'))continue;
+      checkouts++;
+      assert.equal(step.with?.['persist-credentials'],false);
+    }
+  }
+  assert.equal(checkouts,3);
+});
+
+test('release publishing is scoped to administrator-configured environment',()=>{
+  const release=YAML.parse(fs.readFileSync('.github/workflows/release.yml','utf8'));
+  assert.equal(release.permissions.contents,'read');
+  const published=release.jobs['github-release'];
+  assert.equal(published.environment,'release');
+  assert.equal(published.permissions.contents,'write');
+  for(const [name,job] of Object.entries(release.jobs)){
+    if(name!=='github-release'){
+      assert.notEqual(job.permissions?.contents,'write');
+    }
   }
 });
