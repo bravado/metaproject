@@ -20,14 +20,19 @@ Before a tag is pushed, the repository owners must:
 2. Confirm the existing public `bravado/metaproject` repository is approved
    for release and verify private vulnerability reporting is enabled.
 3. Protect `master` and `v*` tags, prevent destructive tag rewriting, restrict
-   release permissions, and configure any required organization approvals.
-   Enable immutable GitHub Releases if supported.
+   release permissions, and configure required organization approvals. Configure
+   a `release` GitHub Environment with required reviewers and appropriate
+   deployment branch/tag rules; the publish job targets this environment. An
+   environment name **alone** offers no approval gate until an administrator
+   configures the environment's protection rules. Enable immutable GitHub
+   Releases if supported.
 4. Review and approve the MIT license, copyright attribution and the exact
    source commit. Obtain separate legal/security/organization sign-off.
 5. Approve the final package version and notes, and review the release workflow
    in `.github/workflows/release.yml`.
 
 None of these settings or approvals is established merely by merging this code.
+Record the evidence using [the public-readiness audit](security-review.md).
 
 ## Verification-only rehearsal
 

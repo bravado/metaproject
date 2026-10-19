@@ -123,6 +123,7 @@ jobs:
   github-release:
     name: Publish verified GitHub Release
     if: ${{ github.event_name == 'push' }}
+    environment: release
     needs: [guard, test, pack, browser]
     runs-on: ubuntu-latest
     permissions:
